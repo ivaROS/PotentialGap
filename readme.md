@@ -23,3 +23,9 @@ See NavBench [https://github.com/ivalab/NavBench](https://github.com/ivalab/NavB
 
 # License
 The source code is released under [MIT](https://opensource.org/licenses/MIT) license. 
+
+# Code Release Todos
+1. `turtlebot_trajectory_{generator, functions, controller, testing}`
+2. `move_base_virtual`
+3. `navigation_test` Update to STDR
+4. Verify the removal of other dependencies
