@@ -1,0 +1,7 @@
+<library path="lib/libpotential_gap">
+
+  <class name="potential_gap/PotentialGapPlanner" type="potential_gap::PotentialGapPlanner" base_class_type="nav_core::BaseLocalPlanner">
+    <description>This is a Potential Gap plugin.</description>
+  </class>
+
+</library>
