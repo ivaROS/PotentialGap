@@ -1,13 +1,25 @@
-# Potential Gap
+# Potential Gap: Using Reactive Policies to Guarantee Safe Navigation
+This paper considers the integration of gap-based local navigation methods with artificial potential field (APF) methods to derive a local planning module for hierarchicalnavigation systems that has provable collision-free properties.Given that APF theory applies to idealized robot models, theprovable properties are lost when applied to more realistic models. We describe a set of algorithm modifications thatcorrect for these errors and enhance robustness to non-ideal models. Central to the construction of the local planner isthe use of sensory-derived local free-space models that detect gaps and use them for the synthesis of the APF. Modifications are given for a nonholonomic robot model. Integration of the local planner, called potential gap, into a hierarchical navigation system provides the local goals and trajectories needed for collision-free navigation through unknown environments.Monte Carlo experiments in benchmark worlds confirm the asserted safety and robustness properties by testing under various robot models.
 
-Using Reactive Policies to Guarantee Safe Navigation
+[[**Demo Video**]](), [[**Arxiv Preprint**]](https://arxiv.org/abs/2103.11491)
 
-# To run the planner
+# Dependencies and Installation
 
-1. launch a world through nav_config (branch potential_gap) 
-2. launch egocircle
-3. launch potential gap planner through nav_scripts (branch potential_gap) `turtlebot_potentialgap_controller.launch`
+- ROS (Kinetic Ubuntu 16.04) [Installation Link](http://wiki.ros.org/kinetic/Installation/Ubuntu)
 
-Config file in `$(find nav_configs)/config/potentialgap_local_planner_params.yaml`
+See NavBench [https://github.com/ivalab/NavBench](https://github.com/ivalab/NavBench) for rosinstall instructions and launching experiments. 
 
+# BibTex Citation
+```
+@misc{xu2021potential,
+      title={Potential Gap: Using Reactive Policies to Guarantee Safe Navigation}, 
+      author={Ruoyang Xu and Shiyu Feng and Patricio A. Vela},
+      year={2021},
+      eprint={2103.11491},
+      archivePrefix={arXiv},
+      primaryClass={cs.RO}
+}
+```
 
+# License
+The source code is released under [MIT](https://opensource.org/licenses/MIT) license. 
