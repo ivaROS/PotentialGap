@@ -1,2 +1,5 @@
-c<sub>a</sub> <BR>
-c<sub>d</sub>
+
+| Parameter | Value | Meaning |
+| --------- | ----- | ------- |
+| c<sub>a</sub> | X | XX |
+| c<sub>d</sub> | X | XX |
