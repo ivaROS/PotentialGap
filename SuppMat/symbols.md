@@ -13,6 +13,9 @@ angle associated with index i in ![\mathcal{L}](https://latex.codecogs.com/svg.l
 ![\zeta_i](https://latex.codecogs.com/svg.latex?\zeta_i):
 Polar coordiante with range and associated angle with index i.
 
+![\text{d}(\cdot;\cdot)](https://latex.codecogs.com/svg.latex?\text{d}(\cdot;\cdot)):
+Euclidean distance.
+
 ![l_l](https://latex.codecogs.com/svg.latex?l_l): 
 Distance to left side of the gap.
 
@@ -69,6 +72,13 @@ Attractive potential to local goal point deterined for the chosen gap.
 
 ![\Theta(x)](https://latex.codecogs.com/svg.latex?\Theta(x)):
 Rotation field for chosen gap.
+
+![\mathbb{J}](https://latex.codecogs.com/svg.latex?\mathbb{J}):
+Rotation matrix ![R(-\pi/2)](https://latex.codecogs.com/svg.latex?R(-\pi/2)) 
+in ![\mathfrak{so}(2)](https://latex.codecogs.com/svg.latex?\mathfrak{so}(2)) skew-symmetric form.
+
+![\text{d}_\theta(\cdot;\cdot)](https://latex.codecogs.com/svg.latex?\text{d}_\theta(\cdot;\cdot)):
+Angular distance.
 
 ![e_\perp](https://latex.codecogs.com/svg.latex?e_\perp):
 The circulation term on the gap line that is purely
