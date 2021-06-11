@@ -80,6 +80,9 @@ in ![\mathfrak{so}(2)](https://latex.codecogs.com/svg.latex?\mathfrak{so}(2)) sk
 ![\text{d}_\theta(\cdot;\cdot)](https://latex.codecogs.com/svg.latex?\text{d}_\theta(\cdot;\cdot)):
 Angular distance.
 
+![p_{l/r}](https://latex.codecogs.com/svg.latex?p_{l/r}):
+Point of left or right side of gap.
+
 ![e_\perp](https://latex.codecogs.com/svg.latex?e_\perp):
 The circulation term on the gap line that is purely
 perpendicular and inward pointing.
