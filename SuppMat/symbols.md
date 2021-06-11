@@ -131,7 +131,7 @@ Value where potential function passes value 1.
 ![r_{\text{nom}}](https://latex.codecogs.com/svg.latex?r_{\text{nom}):
 Value where potential function passes value 0.
 
-![\proj(u; x)](https://latex.codecogs.com/svg.latex?\proj(u; x)):
+![\text{Proj}(u; x)](https://latex.codecogs.com/svg.latex?\text{Proj}(u; x)):
 Projection operator.
 
 ![\Omega_O](https://latex.codecogs.com/svg.latex?\Omega_O):
