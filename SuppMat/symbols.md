@@ -1,53 +1,139 @@
 ### Gap Detection
 
-| Symbol | Meaning |
-| ------ | ------- |
-| \mathcal{L} | Laser-scan like measurements |
-| d(&middot;;&middot;) | Euclidean distance |
-| &zeta;(j) | Coordinate of one measurement with index j |
-| &theta;(j) | Scan angle associated to index j |
-| \mathcal{G} | Gap set |
-| G | Detected gap in the gap set |
-| &alpha; | The angle to classify gap into swept or radial gap |
-| SGP | Swept gap prioritization |
-| CG | Closet gap |
-| &#981; | Rotation angle of radial gaps in radial gap conversion |
+![\mathcal{L}](https://latex.codecogs.com/svg.latex?\mathcal{L}): 
+A full laser scan-like measurement.
 
+![d_{\max}](https://latex.codecogs.com/svg.latex?d_{\max}): 
+Maximum range of laser scan measurement.
+
+![\theta(i)](https://latex.codecogs.com/svg.latex?\theta(i)):
+angle associated with index i in ![\mathcal{L}](https://latex.codecogs.com/svg.latex?\mathcal{L}(i)).
+
+
+![\zeta_i](https://latex.codecogs.com/svg.latex?\zeta_i):
+Polar coordiante with range and associated angle with index i.
+
+![l_l](https://latex.codecogs.com/svg.latex?l_l): 
+Distance to left side of the gap.
+
+![l_r](https://latex.codecogs.com/svg.latex?l_r): 
+Distance to right side of the gap.
+
+![\alpha](https://latex.codecogs.com/svg.latex?\alpha): 
+Angle formed by the shorter side of gap and the gap arc.
+
+![\tau_\alpha](https://latex.codecogs.com/svg.latex?\tau_\alpha): 
+Threshold value on ![\alpha](https://latex.codecogs.com/svg.latex?\alpha)
+to distinguish between radial and swept gaps.
+
+![G](https://latex.codecogs.com/svg.latex?G): 
+A single detected gap.
+
+![\mathcal{G}](https://latex.codecogs.com/svg.latex?\mathcal{G}): 
+The set of raw detected gaps.
+
+![c_a](https://latex.codecogs.com/svg.latex?c_a): 
+Maximum acceptable angular difference between pending
+and terminating gap.
+
+![c_d](https://latex.codecogs.com/svg.latex?c_d): 
+Maximum acceptable range difference between pending
+and terminating gap.
+
+![\epsilon = (\epsilon^1, \epsilon^2)](https://latex.codecogs.com/svg.latex?\epsilon=(\epsilon^1,\epsilon^2)): 
+Parameter to control the rotation of gaps in Radial Gap conversion. Scales
+with robot geometry
+
+![\phi](https://latex.codecogs.com/svg.latex?\phi): 
+Amount of rotation, controlled by ![\epsilon = (\epsilon^1, \epsilon^2)](https://latex.codecogs.com/svg.latex?\epsilon=(\epsilon^1,\epsilon^2)).
 
 ### Potential Field Construction
 
-| Symbol | Meaning |
-| ------ | ------- |
-| \mathcal{G}<sub>SGP</sub> | Gap set after swept gap prioritization |
-| G&prime; | The gap after shrinking angle to ensure that the gap region is a polar triangle convex in Euclidian space. |
-| x<sub>LG</sub><sup>*</sup> | Local goal point determined from the chosen gap |
-| G<sup>*</sup> | The chosen gap |
-| &Phi;(x) | Attractive potential. It will attract robot to the gap curve then through to the local goal. |
-| &Theta;(x) | Purely rotational vector field |
-| \mathbb{J} | Rotation matrix with so(2) skew-symmetric form |
-| d<sup>&theta;</sup>(&middot;;&middot;) | Angular distance |
-| &delta; | Parameter or symbol ? |
-| p<sup>l/r</sup> |  |
-| e<sub>⊥</sub> | Circulation term on the gap line. d<sup>&theta;</sup> is vanished. Circulation is purely perpendicular and inward pointing. |
-| f<sup>&#981;</sup> | Other circulation term |
-| e<sup>&rho;</sup> | Radially directed outward vector |
+![\mathcal{G}_SGP](https://latex.codecogs.com/svg.latex?\mathcal{G}_{\text{SGP}}): 
+Set of gaps after SGP.
 
-### Trajectory synthesis and scoring
+![\tau_{\text{GA}}](https://latex.codecogs.com/svg.latex?\tau_{\text{GA}}): 
+Parameter for closing the gap for convexity. Typically 90 or 180 degrees.
 
-| Symbol | Meaning |
-| ------ | ------- |
-| \mathcal{X} | A set of trajectories that integrated based on potential field. |
-| \mathcal{T} | A single trajectory discretized into poses |
-| p | Discretized poses on the trajectory |
-| p<sub>*</sub> | Local navigation goal |
-| p<sup>end</sup> | The last pose on the trajectory |
-| J | Trajectory score |
+![G'](https://latex.codecogs.com/svg.latex?G'): 
+Shrinked gap with angular extent with only ![\tau_{\text{GA}}](https://latex.codecogs.com/svg.latex?\tau_{\text{GA}})
+
+![G^*](https://latex.codecogs.com/svg.latex?G^*): 
+Chosen gap.
+
+![x^*_{\text{LG}}](https://latex.codecogs.com/svg.latex?x^*_{\text{LG}}):
+Local goal point for chosen gap G*.
+
+![\Phi(x)](https://latex.codecogs.com/svg.latex?\Phi(x)):
+Attractive potential to local goal point deterined for the chosen gap. 
+
+![\Theta(x)](https://latex.codecogs.com/svg.latex?\Theta(x)):
+Rotation field for chosen gap.
+
+![e_\perp](https://latex.codecogs.com/svg.latex?e_\perp):
+The circulation term on the gap line that is purely
+perpendicular and inward pointing.
+
+![f_\phi](https://latex.codecogs.com/svg.latex?f_\phi):
+The vector contributed by the circulation term that is
+on the conjugate gap line. 
+
+![e_\rho](https://latex.codecogs.com/svg.latex?e_\rho):
+The radially directed outward vector for point inside the gap region.
+
+![\hat{\nabla}](https://latex.codecogs.com/svg.latex?\hat{\nabla}):
+Operator that computes the gradient and normalize to unit length.
+
+### Trajectory Synthesis and Scoring
+![\mathcal{X}](https://latex.codecogs.com/svg.latex?\mathcal{X}):
+A set of trajectories integrated based on potential field.
+
+![p](https://latex.codecogs.com/svg.latex?p):
+A single pose.
+
+![\mathcal{T}](https://latex.codecogs.com/svg.latex?\mathcal{T}):
+A trajectory formed by a collection of a pose.
+
+![p_{\text{end}}](https://latex.codecogs.com/svg.latex?p_{\text{end}}):
+The last pose on a trajectory ![\mathcal{T}](https://latex.codecogs.com/svg.latex?\mathcal{T}).
+
+![p^*](https://latex.codecogs.com/svg.latex?p^*):
+The local navigation goal. 
+
+![J](https://latex.codecogs.com/svg.latex?J):
+Function to calculate the cost of a trajectory.
+
+![w_1](https://latex.codecogs.com/svg.latex?w_1):
+Amplification factor so that the score associated to the terminal state is comparable in scaling to the score generated by integrating along the trajectory
+
+![w_2](https://latex.codecogs.com/svg.latex?w_2):
+Decay factor on penalty for getting close to an obstacle point.
+
+![c_{\text{obs}}](https://latex.codecogs.com/svg.latex?c_{\text{obs}}):
+Amplification factor and sign correction for the obstacle proximity penalty.
+
+![r_{\max}](https://latex.codecogs.com/svg.latex?r_{\max}):
+Maximum range to apply cost function on a pose. 
+
+
 
 ### Projection Operator
 
-| &xi;<sup>u</sup> | Feasible movement to control non-holonomic robot |
-| &nu; | Linear velocity of non-holonomic robot |
-| &omega; | Angular velocity of non-holonomic robot |
-| \mathcal{C} | The set of collision curves to the left and to the right of the gap in polar space. |
-| &psi; | Obstacle potential function |
+![\mathcal{C}](https://latex.codecogs.com/svg.latex?\mathcal{C})
+Set of collision curves in the polar space
+
+![\psi(x)](https://latex.codecogs.com/svg.latex?\psi(x)):
+Potential function for projection operator.
+
+![r_{\min}](https://latex.codecogs.com/svg.latex?r_{\min}):
+Value where potential function passes value 1.
+
+![r_{\text{nom}}](https://latex.codecogs.com/svg.latex?r_{\text{nom}):
+Value where potential function passes value 0.
+
+![\proj(u; x)](https://latex.codecogs.com/svg.latex?\proj(u; x)):
+Projection operator.
+
+![\Omega_O](https://latex.codecogs.com/svg.latex?\Omega_O):
+Unsafe set established by the obstacles, through potential function.
 

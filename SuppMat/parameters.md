@@ -24,3 +24,11 @@ These parameters are similar to the trajectory scoring parameters used in the RO
 | c<sub>obs</sub> | -1 | Amplification factor and sign correction for the obstacle proximity penalty. |
 | r<sub>max</sub> | 0.3 | XXXXXX. SHOULDN'T IT BE SOME FRACTION OF r<sub>ins</sub>???? |
 
+### Control and Projection Operator
+
+| Parameter |        Value      | Meaning |
+| --------- | :---------------: | ------- |
+| &lambda;<sub>y</sub> | X | Conversion gain for mapping lateral controls to turn rates for standard nonholonomic vehicles (forward speed and turn rate control inputs) |
+| r<sub>min</sub> | ~r<sub>min</sub> | Potential field minimal radius, at which distance the level-set value is 1. Should be related to the inscribed radius. |
+| r<sub>nom</sub> | 1 | Potential field nominal radius, at which distance the level-set value is 0. Determines when correction response starts to reshape the command vector to preserve forward invariance. Should be some multiple of the circumscribed radius of the robot. The difference between r<sub>min</sub> and r<sub>nom</sub> defines a band in space where command reshaping happens. A smaller difference gives a smaller region and more sensitive reshaping.  A larger difference gives a larger region and less aggressive reshaping. The value given is the one used for the Turtlebot. |
+
