@@ -65,7 +65,7 @@ Shrinked gap with angular extent with only ![\tau_{\text{GA}}](https://latex.cod
 Chosen gap.
 
 ![x^*_{\text{LG}}](https://latex.codecogs.com/svg.latex?x^*_{\text{LG}}):
-Local goal point for chosen gap G*.
+Local goal point for chosen gap ![G^*](https://latex.codecogs.com/svg.latex?G^*).
 
 ![\Phi(x)](https://latex.codecogs.com/svg.latex?\Phi(x)):
 Attractive potential to local goal point deterined for the chosen gap. 
