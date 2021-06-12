@@ -3,16 +3,13 @@ This paper considers the integration of gap-based local navigation methods with 
 
 [[**Demo Video**]](), [[**Arxiv Preprint**]](https://arxiv.org/abs/2103.11491)
 
-# Supplementary materials
-[Algorithm parameters](https://github.com/ivaROS/PotentialGap/blob/main/SuppMat/parameters.md)
+## Supplementary materials
 
-[Symbols](https://github.com/ivaROS/PotentialGap/blob/main/SuppMat/symbols.md)
-
-[Abbreviations](https://github.com/ivaROS/PotentialGap/blob/main/SuppMat/abbreviations.md)
-
-[Links to sections](https://github.com/ivaROS/PotentialGap/blob/main/SuppMat/links_to_algorithm_sections.md)
-
-[Algorithm details of gap simplification, radial gap conversion and radial extension]()
+- [Algorithm parameters](https://github.com/ivaROS/PotentialGap/blob/main/SuppMat/parameters.md)
+- [Manuscript symbols](https://github.com/ivaROS/PotentialGap/blob/main/SuppMat/symbols.md)
+- [Manuscript abbreviations](https://github.com/ivaROS/PotentialGap/blob/main/SuppMat/abbreviations.md)
+- [Links to main implementation code files](https://github.com/ivaROS/PotentialGap/blob/main/SuppMat/links_to_algorithm_sections.md)
+- [Algorithm details of gap simplification, radial gap conversion and radial extension]()
 
 # Dependencies and Installation
 
