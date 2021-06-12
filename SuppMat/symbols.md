@@ -21,6 +21,7 @@
 | Variable | Meaning |
 | :------: | :------ |
 | ![\mathcal{G}_SGP](https://latex.codecogs.com/svg.latex?\mathcal{G}_{\text{SGP}}) | Set of gaps after Swept Gap Prioritization (SGP) |
+| ![\alpha_g](https://latex.codecogs.com/svg.latex?\alpha_g) | Gap angular extend in Fig. 2 |
 | ![\tau_{\text{GA}}](https://latex.codecogs.com/svg.latex?\tau_{\text{GA}}) | Parameter for closing the gap for convexity. Typically 90 or 180 degrees. |
 | ![G'](https://latex.codecogs.com/svg.latex?G') | Reduced gap with angular extent equal to ![\tau_{\text{GA}}](https://latex.codecogs.com/svg.latex?\tau_{\text{GA}}). |
 | ![G^*](https://latex.codecogs.com/svg.latex?G^*) | Chosen gap. |
