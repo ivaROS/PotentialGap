@@ -1,3 +1,7 @@
+# Potential Gap Parameters and Values Used
+
+The implementation has been configured for use by a Turtlbot 2 robot. Many of the parameter values are geometric quantities that should scale with the Turtlebot's radius and its other properties. The parameters are organized according to the different sections within the Potential Gap manuscript.
+
 ### Gap Detection
 
 | Parameter |        Value      | Meaning |
