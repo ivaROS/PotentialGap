@@ -30,6 +30,6 @@ These parameters are similar to the trajectory scoring parameters used in the RO
 | Parameter |        Value      | Meaning |
 | --------- | :---------------: | ------- |
 | &lambda;<sub>y</sub> | 1 | Conversion gain for mapping lateral controls to turn rates for standard nonholonomic vehicles (forward speed and turn rate control inputs) |
-| r<sub>min</sub> | ~r<sub>min</sub> | Potential field minimal radius, at which distance the level-set value is 1. Should be related to the inscribed radius. |
+| r<sub>min</sub> | 2 r<sub>ins</sub> | Potential field minimal radius, at which distance the level-set value is 1. Should be related to the inscribed radius. |
 | r<sub>nom</sub> | 1 | Potential field nominal radius, at which distance the level-set value is 0. Determines when correction response starts to reshape the command vector to preserve forward invariance. Should be some multiple of the circumscribed radius of the robot. The difference between r<sub>min</sub> and r<sub>nom</sub> defines a band in space where command reshaping happens. A smaller difference gives a smaller region and more sensitive reshaping.  A larger difference gives a larger region and less aggressive reshaping. The value given is the one used for the Turtlebot. |
 
