@@ -2,7 +2,7 @@
 
 | Parameter |        Value      | Meaning |
 | --------- | :---------------: | ------- |
-| d<sub>max</sub> | 3 | Maximum value of egocircle (or laser scan) range values. Mostly determined by the sensor. |
+| d<sub>max</sub> | 3 | Maximum value of egocircle (or laser scan) range values. Mostly determined by the sensor. Can be set lower if those values are too uncertain so that even a few closer points can be considered far. |
 | r<sub>ins</sub> | 0.18 | Inscribed radius of the robot. Determined by geometry of the robot. |
 | &tau;<sub>a</sub> | 3&pi;/4 | Threshold on angle between the gap chord and the shortest side (define by the closest gap edge point to robot). Determines what gaps are classified as radial gaps. |
 | c<sub>a</sub> | &pi;/2 | Threshold on acceptable angular difference between most distant gap edge points for merging two gaps. |
