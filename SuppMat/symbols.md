@@ -28,7 +28,7 @@
 | ![\Phi(x)](https://latex.codecogs.com/svg.latex?\Phi(x)) |Attractive potential to local goal point determined for the chosen gap. |
 | ![\Theta(x)](https://latex.codecogs.com/svg.latex?\Theta(x)) | Circulation vector field for chosen gap.|
 | ![\mathbb{J}](https://latex.codecogs.com/svg.latex?\mathbb{J}) | Rotation matrix ![R(-\pi/2)](https://latex.codecogs.com/svg.latex?R(-\pi/2)) in ![\mathfrak{so}(2)](https://latex.codecogs.com/svg.latex?\mathfrak{so}(2)) skew-symmetric form. |
-| ![\text{d}_\theta(\cdot;\cdot)](https://latex.codecogs.com/svg.latex?\text{d}_\theta(\cdot;\cdot)) | Angular distance for planar polar coordinate vectors. |
+| ![\text{d}_\theta(\cdot,\cdot)](https://latex.codecogs.com/svg.latex?\text{d}_\theta(\cdot,\cdot)) | Angular distance for planar polar coordinate vectors. |
 | ![p_{l/r}](https://latex.codecogs.com/svg.latex?p_{l/r}) | Point of left or right side of gap. |
 | ![e_\perp](https://latex.codecogs.com/svg.latex?e_\perp) |The circulation term on the gap edge (it is purely perpendicular and inward pointing for the gap point associated to the gap edge). |
 | ![f_\phi](https://latex.codecogs.com/svg.latex?f_\phi) | The vector contributed by the circulation term that is on the conjugate gap edge. |
