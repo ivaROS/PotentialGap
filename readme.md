@@ -4,7 +4,7 @@ This paper considers the integration of gap-based local navigation methods with 
 [[**Demo Video**]](), [[**Arxiv Preprint**]](https://arxiv.org/abs/2103.11491)
 
 # Supplementary materials
-[Algorithm parameters](https://github.com/ivaROS/PotentialGap/blob/main/SuppMat/parameters.md), [Symbols used](https://github.com/ivaROS/PotentialGap/blob/main/SuppMat/symbols.md), [Abbreviations](https://github.com/ivaROS/PotentialGap/blob/main/SuppMat/abbreviations.md)
+[Algorithm parameters](https://github.com/ivaROS/PotentialGap/blob/main/SuppMat/parameters.md), [Symbols](https://github.com/ivaROS/PotentialGap/blob/main/SuppMat/symbols.md), [Abbreviations](https://github.com/ivaROS/PotentialGap/blob/main/SuppMat/abbreviations.md)
 
 # Dependencies and Installation
 
