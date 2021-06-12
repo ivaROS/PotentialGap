@@ -1,6 +1,6 @@
 # Potential Gap Parameters and Values Used
 
-The implementation has been configured for use by a Turtlbot 2 robot. Many of the parameter values are geometric quantities that should scale with the Turtlebot's radius and its other properties. The parameters are organized according to the different sections within the Potential Gap manuscript.
+The implementation has been configured for use by a Turtlebot 2 robot. Many of the parameter values are geometric quantities that should scale with the Turtlebot's radius and its other properties. The parameters are organized according to the different sections within the Potential Gap manuscript.
 
 ### Gap Detection
 
@@ -17,7 +17,7 @@ The implementation has been configured for use by a Turtlbot 2 robot. Many of th
 | Parameter |        Value      | Meaning |
 | --------- | :---------------: | ------- |
 | &tau;<sub>GA</sub> | &pi;/2 or &pi; | Maximum allowable angle between two gap endpoints (or their absolute angular difference in polar space). Which to use depends on whether radial extension is enabled. Larger when enabled, smaller when not. Ensures that the final polar triangle defined by the robot and the gap is convex. Convexity guarantees line-of-sight visibility of the local goal from any point within the gap region defined by the polar triangle. In effect, this connecting line along the line-of-sight is guaranteed to be collision free. |
-| &delta; | 1 | Decay factor in constructing purely rotational vector field. |
+| &delta; | 1 | Decay factor in equation 3 for constructing purely rotational vector field. |
 
 ### Trajectory Scoring
 These parameters are similar to the trajectory scoring parameters used in the ROS _move\_base_ package.
