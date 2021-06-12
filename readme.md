@@ -10,7 +10,7 @@ This paper considers the integration of gap-based local navigation methods with 
 
 [Abbreviations](https://github.com/ivaROS/PotentialGap/blob/main/SuppMat/abbreviations.md)
 
-[Links to sections]()
+[Links to sections](https://github.com/ivaROS/PotentialGap/blob/main/SuppMat/links_to_algorithm_sections.md)
 
 [Algorithm details of gap simplification, radial gap conversion and radial extension]()
 
