@@ -26,3 +26,6 @@ https://github.com/ivaROS/PotentialGap/blob/main/src/trajectory_scoring.cpp
 https://github.com/ivaROS/PotentialGap/blob/main/src/trajectory_controller.cpp
 
 
+## Detailed Description of Algorithms
+https://github.com/ivaROS/PotentialGap/blob/main/SuppMat/gapMerging.pdf
+
