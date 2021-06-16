@@ -17,6 +17,8 @@ This paper considers the integration of gap-based local navigation methods with 
 
 See NavBench [https://github.com/ivalab/NavBench](https://github.com/ivalab/NavBench) for rosinstall instructions and launching experiments. 
 
+- We are trying to release related dependencies as soon as possible. Please stay tuned
+
 # BibTex Citation
 ```
 @misc{xu2021potential,

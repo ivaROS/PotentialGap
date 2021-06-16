@@ -142,7 +142,6 @@ namespace potential_gap{
             min_diff_y = - min_y;
             comp = projection_method(min_diff_x, min_diff_y);
             si_der = Eigen::Vector2d(comp(0), comp(1));
-            si_der(1) /= 3;
             prod_mul = v_err.dot(si_der);
 
             if(comp(2) >= 0 && prod_mul <= 0)
