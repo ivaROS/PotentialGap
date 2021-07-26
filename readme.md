@@ -10,6 +10,7 @@ This paper considers the integration of gap-based local navigation methods with 
 - [Manuscript abbreviations](https://github.com/ivaROS/PotentialGap/blob/main/SuppMat/abbreviations.md)
 - [Links to main implementation code files](https://github.com/ivaROS/PotentialGap/blob/main/SuppMat/links_to_algorithm_sections.md)
 - [Algorithm details of gap simplification, radial gap conversion and radial extension](https://github.com/ivaROS/PotentialGap/blob/main/SuppMat/gapMerging.pdf)
+- [Comparison Between TEB and PG](https://github.com/ivaROS/PotentialGap/blob/main/SuppMat/compTable.pdf)
 
 # Dependencies and Installation
 
