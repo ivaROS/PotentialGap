@@ -3,6 +3,8 @@ This paper considers the integration of gap-based local navigation methods with 
 
 [[**Demo Video**]](), [[**Arxiv Preprint**]](https://arxiv.org/abs/2103.11491)
 
+<img src="https://github.com/ivaROS/PotentialGap/blob/main/assets/coverImg.png" width = 55% height = 55%/>
+
 ## Supplementary materials
 
 - [Algorithm parameters](https://github.com/ivaROS/PotentialGap/blob/main/SuppMat/parameters.md)
