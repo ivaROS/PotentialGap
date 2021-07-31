@@ -30,50 +30,13 @@ namespace potential_gap
             GoalSelector& operator=(GoalSelector other) {cfg_ = other.cfg_;};
             GoalSelector(const GoalSelector &t) {cfg_ = t.cfg_;};
 
-            /**
-             * @brief Set current global path
-             * @param g_path
-             * @return if successfully set
-             */
+            // Map Frame
             bool setGoal(const std::vector<geometry_msgs::PoseStamped> &);
-
-            /**
-             * @brief Update egocircle information
-             * @param egocircle
-             */
             void updateEgoCircle(boost::shared_ptr<sensor_msgs::LaserScan const>);
-
-            /**
-             * @brief Set waypoint in the robot frame given laserscan and global path
-             * @param egocircle
-             */
             void updateLocalGoal(geometry_msgs::TransformStamped map2rbt);
-
-        
-            /**
-             * @brief Return stored local goal of rbt frame in odom frame
-             * @param tf
-             * @return local goal in odom frame
-             */
             geometry_msgs::PoseStamped getCurrentLocalGoal(geometry_msgs::TransformStamped rbt2odom);
-
-            /**
-             * @brief Return stored local goal of rbt frame in rbt frame
-             * @return local goal in rbt frame
-             */
             geometry_msgs::PoseStamped rbtFrameLocalGoal() {return local_goal;};
-
-            /**
-             * @brief Return global plan in original odom frame
-             * @return plan in odom frame
-             */            
             std::vector<geometry_msgs::PoseStamped> getOdomGlobalPlan();
-
-            /**
-             * @brief Get global plan that is within egocirlce range
-             * @param g_plan
-             * @return subset of global plan within egocirlce range
-             */
             std::vector<geometry_msgs::PoseStamped> getRelevantGlobalPlan(geometry_msgs::TransformStamped);
 
 
@@ -86,37 +49,17 @@ namespace potential_gap
             boost::mutex goal_select_mutex;
             boost::mutex lscan_mutex;
             boost::mutex gplan_mutex;
+
+
             double threshold = 3;
 
-            /**
-             * @brief Thresholding
-             */
+            // If distance to robot is within
             bool isNotWithin(const double dist);
-            
-            /**
-             * @brief distance to robot
-             */
+            // Pose to robot, when all in rbt frames
             double dist2rbt(geometry_msgs::PoseStamped);
-
-            /**
-             * @brief Angular index of pose projection on polar space
-             */
             int PoseIndexInSensorMsg(geometry_msgs::PoseStamped pose);
-
-            /**
-             * @brief Pose Orientation
-             */
             double getPoseOrientation(geometry_msgs::PoseStamped);
-
-            /**
-             * @brief If the pose is not immediately colliding
-             (visibly non-colliding or uncertain)
-             */
             bool VisibleOrPossiblyObstructed(geometry_msgs::PoseStamped pose);
-
-            /**
-             * @brief If the pose is immediately colliding
-             */
             bool NoTVisibleOrPossiblyObstructed(geometry_msgs::PoseStamped pose);
 
     };

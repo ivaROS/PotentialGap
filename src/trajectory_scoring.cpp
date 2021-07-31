@@ -20,18 +20,12 @@ namespace potential_gap {
         gaps = observed_gaps;
     }
 
-    void TrajectoryArbiter::updateEgocircleCalib(geometry_msgs::PoseStamped rbt_in_cam) {
-        boost::mutex::scoped_lock lock(egocircle_mutex);
-        rbt_in_cam_lc = rbt_in_cam;
-    }
-
-
     void TrajectoryArbiter::updateLocalGoal(geometry_msgs::PoseStamped lg, geometry_msgs::TransformStamped odom2rbt) {
         boost::mutex::scoped_lock lock(gplan_mutex);
         tf2::doTransform(lg, local_goal, odom2rbt);
     }
 
-    // rbt frame
+    // Does things in rbt frame
     std::vector<double> TrajectoryArbiter::scoreGaps()
     {
         boost::mutex::scoped_lock planlock(gplan_mutex);
@@ -41,9 +35,12 @@ namespace potential_gap {
             return std::vector<double>(0);
         }
 
+        // How fix this
         int num_of_scan = msg.get()->ranges.size();
         double goal_orientation = std::atan2(local_goal.pose.position.y, local_goal.pose.position.x);
         int idx = goal_orientation / (M_PI / (num_of_scan / 2)) + (num_of_scan / 2);
+        ROS_DEBUG_STREAM("Goal Orientation: " << goal_orientation << ", idx: " << idx);
+        ROS_DEBUG_STREAM(local_goal.pose.position);
         auto costFn = [](potential_gap::Gap g, int goal_idx) -> double
         {
             int leftdist = std::abs(g._left_idx - goal_idx);
@@ -61,15 +58,16 @@ namespace potential_gap {
     }
 
     // Again, in rbt frame
-    [[deprecated("Implementation removed, use scoreTrajectory instead.")]]
     std::vector<double> TrajectoryArbiter::scoreTrajectories (
         std::vector<geometry_msgs::PoseArray> sample_traj) {
+        // This will be in robot frame
+        
         return std::vector<double>(sample_traj.size());
     }
 
     std::vector<double> TrajectoryArbiter::scoreTrajectory(geometry_msgs::PoseArray traj) {
         // Requires LOCAL FRAME
-        // No racing condition
+        // Should be no racing condition
         std::vector<double> cost_val(traj.poses.size());
 
         for (int i = 0; i < cost_val.size(); i++) {
@@ -78,10 +76,11 @@ namespace potential_gap {
 
         auto total_val = std::accumulate(cost_val.begin(), cost_val.end(), double(0));
 
-        if (cost_val.size() > 0)
+        if (cost_val.size() > 0) // && ! cost_val.at(0) == -std::numeric_limits<double>::infinity())
         {
             auto terminal_cost = 10 * terminalGoalCost(*std::prev(traj.poses.end()));
             if (terminal_cost < 1 && total_val > -10) return std::vector<double>(traj.poses.size(), 100);
+            // Should be safe
             cost_val.at(0) -= terminal_cost;
         }
         
@@ -90,6 +89,7 @@ namespace potential_gap {
 
     double TrajectoryArbiter::terminalGoalCost(geometry_msgs::Pose pose) {
         boost::mutex::scoped_lock planlock(gplan_mutex);
+        // ROS_INFO_STREAM(pose);
         double dx = pose.position.x - local_goal.pose.position.x;
         double dy = pose.position.y - local_goal.pose.position.y;
         return sqrt(pow(dx, 2) + pow(dy, 2));
@@ -116,21 +116,10 @@ namespace potential_gap {
             ROS_FATAL_STREAM("Scan range incorrect scorePose");
         }
 
-
         for (int i = 0; i < dist.size(); i++) {
             float this_dist = stored_scan.ranges.at(i);
-            float x, y, angle;
-
-            x = this_dist * cos(i * stored_scan.angle_increment - M_PI);
-            y = this_dist * sin(i * stored_scan.angle_increment - M_PI);
-            // in camera frame
-            x -= rbt_in_cam_lc.pose.position.x;
-            y -= rbt_in_cam_lc.pose.position.y;
-            this_dist = sqrt(pow(x, 2) + pow(y, 2));
-            angle = atan2(y, x);
-                        
             this_dist = this_dist == 3 ? this_dist + cfg_->traj.rmax : this_dist;
-            dist.at(i) = dist2Pose(angle,
+            dist.at(i) = dist2Pose(i * stored_scan.angle_increment - M_PI,
                 this_dist, pose);
         }
 
@@ -139,9 +128,7 @@ namespace potential_gap {
     }
 
     double TrajectoryArbiter::chapterScore(double d) {
-        // Or alternatively, -std::numeric_limits<double>::infinity()
-        // This serves as the perception space collision checking
-        if (d < r_inscr * cfg_->traj.inf_ratio) return -1000;
+        if (d < r_inscr * cfg_->traj.inf_ratio) return -std::numeric_limits<double>::infinity();
         if (d > rmax) return 0;
         return cobs * std::exp(- w * (d - r_inscr * cfg_->traj.inf_ratio));
     }
@@ -156,12 +143,12 @@ namespace potential_gap {
         return searchIdx;
     }
 
-    [[deprecated("Score Trajectory instead.")]]
     potential_gap::Gap TrajectoryArbiter::returnAndScoreGaps() {
         boost::mutex::scoped_lock gaplock(gap_mutex);
         std::vector<double> cost = scoreGaps();
         auto decision_iter = std::min_element(cost.begin(), cost.end());
         int gap_idx = std::distance(cost.begin(), decision_iter);
+        // ROS_INFO_STREAM("Selected Gap Index " << gap_idx);
         auto selected_gap = gaps.at(gap_idx);
         return selected_gap;
     }

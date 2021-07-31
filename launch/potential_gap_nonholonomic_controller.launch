@@ -21,10 +21,10 @@
   <arg name="r_min" default="$(optenv GM_PARAM_R_MIN 0.36)"/>
   <arg name="k_po" default="$(optenv GM_PARAM_K_PO 1.2)"/>
   <arg name="r_norm" default="$(optenv GM_PARAM_R_NORM 1)"/>
-  <arg name="reduction_threshold" default="$(optenv GM_PARAM_REDUCTION_THRESHOLD 3.1415926)"/>
-  <arg name="reduction_target" default="$(optenv GM_PARAM_REDUCTION_TARGET 3.1415926)"/>
+
   
-  <arg name="debug" default="true"/>
+
+  <arg name="debug" default="false"/>
 
   <arg name="debug_prefix" value="" unless="$(arg debug)"/> <!-- valgrind - -tool=callgrind -->
   <arg name="debug_prefix" value="xterm -e gdb -ex run --args" if="$(arg debug)"/>
@@ -32,7 +32,7 @@
   <!-- xterm -e gdb -ex run - -args -->
   
   
-  <!-- <env name="ROSCONSOLE_CONFIG_FILE" value="$(find nav_configs)/config/custom_teb_rosconsole.conf"/> -->
+  <env name="ROSCONSOLE_CONFIG_FILE" value="$(find nav_configs)/config/custom_teb_rosconsole.conf"/>
   
   <node pkg="move_base_virtual" type="move_base_virtual" respawn="false" name="move_base_virtual" output="screen" clear_params="true" launch-prefix="$(arg debug_prefix)">
       <rosparam file="$(find potential_gap)/config/common_costmap_params.yaml" command="load" ns="global_costmap"/>
@@ -77,8 +77,7 @@
       <param name="PotentialGapPlanner/r_min" value="$(arg r_min)"/>
       <param name="PotentialGapPlanner/r_norm" value="$(arg r_norm)"/>
       <param name="PotentialGapPlanner/k_po" value="$(arg k_po)"/>
-      <param name="PotentialGapPlanner/reduction_threshold" value="$(arg reduction_threshold)"/>
-      <param name="PotentialGapPlanner/reduction_target" value="$(arg reduction_target)"/>
+
 
       <!-- Disable the local costmap observation sources if they will not be used -->
       <!--<param name="local_costmap/obstacle_layer/observation_sources" value="false" if="$(arg egocircle)"/>-->

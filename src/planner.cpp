@@ -27,7 +27,8 @@ namespace potential_gap
         // Config Setup
         cfg.loadRosParamFromNodeHandle(unh);
 
-        // Setup
+        // Visualization Setup
+        // Fix this later
         local_traj_pub = nh.advertise<geometry_msgs::PoseArray>("relevant_traj", 500);
         trajectory_pub = nh.advertise<geometry_msgs::PoseArray>("pg_traj", 10);
         gap_vis_pub = nh.advertise<visualization_msgs::MarkerArray>("gaps", 1);
@@ -73,7 +74,7 @@ namespace potential_gap
         bool result = sqrt(pow(dx, 2) + pow(dy, 2)) < cfg.goal.goal_tolerance;
         if (result)
         {
-            ROS_INFO_STREAM("Goal Reached");
+            ROS_INFO_STREAM("[Reset] Goal Reached");
             return true;
         }
 
@@ -81,7 +82,8 @@ namespace potential_gap
         double waydy = local_waypoint_odom.pose.position.y - current_pose_.position.y;
         bool wayres = sqrt(pow(waydx, 2) + pow(waydy, 2)) < cfg.goal.waypoint_tolerance;
         if (wayres) {
-            ROS_DEBUG_STREAM("[Reset] Waypoint reached, getting new one");
+            ROS_INFO_STREAM("[Reset] Waypoint reached, getting new one");
+            // global_plan_location += global_plan_lookup_increment;
         }
         return false;
     }
@@ -99,12 +101,17 @@ namespace potential_gap
             msg = sharedPtr_inflatedlaser;
         }
 
-        {
+        // ROS_INFO_STREAM(msg.get()->ranges.size());
+
+        try {
             boost::mutex::scoped_lock gapset(gapset_mutex);
             finder->hybridScanGap(msg, observed_gaps);
             gapvisualizer->drawGaps(observed_gaps, std::string("raw"));
             finder->mergeGapsOneGo(msg, observed_gaps);
             gapvisualizer->drawGaps(observed_gaps, std::string("fin"));
+            // ROS_INFO_STREAM("observed_gaps count:" << observed_gaps.size());
+        } catch (...) {
+            ROS_FATAL_STREAM("mergeGapsOneGo");
         }
 
         boost::shared_ptr<sensor_msgs::LaserScan const> tmp;
@@ -136,6 +143,7 @@ namespace potential_gap
         if(msg->header.frame_id != cfg.odom_frame_id)
         {
             geometry_msgs::TransformStamped robot_pose_odom_trans = tfBuffer.lookupTransform(cfg.odom_frame_id, msg->header.frame_id, ros::Time(0));
+
             geometry_msgs::PoseStamped in_pose, out_pose;
             in_pose.header = msg->header;
             in_pose.pose = msg->pose.pose;
@@ -178,16 +186,21 @@ namespace potential_gap
         // Set new local goal to trajectory arbiter
         trajArbiter->updateLocalGoal(local_waypoint_odom, odom2rbt);
 
-        auto traj = goalselector->getRelevantGlobalPlan(map2rbt);
-        geometry_msgs::PoseArray pub_traj;
-        if (traj.size() > 0) {
-            // Need to be safe with this check
-            pub_traj.header = traj.at(0).header;
+        // Visualization only
+        try { 
+            auto traj = goalselector->getRelevantGlobalPlan(map2rbt);
+            geometry_msgs::PoseArray pub_traj;
+            if (traj.size() > 0) {
+                // Should be safe with this check
+                pub_traj.header = traj.at(0).header;
+            }
+            for (auto trajpose : traj) {
+                pub_traj.poses.push_back(trajpose.pose);
+            }
+            local_traj_pub.publish(pub_traj);
+        } catch (...) {
+            ROS_FATAL_STREAM("getRelevantGlobalPlan");
         }
-        for (auto trajpose : traj) {
-            pub_traj.poses.push_back(trajpose.pose);
-        }
-        local_traj_pub.publish(pub_traj);
 
         return true;
     }
@@ -200,11 +213,10 @@ namespace potential_gap
             odom2rbt = tfBuffer.lookupTransform(cfg.robot_frame_id, cfg.odom_frame_id, ros::Time(0));
             rbt2odom = tfBuffer.lookupTransform(cfg.odom_frame_id, cfg.robot_frame_id, ros::Time(0));
             cam2odom = tfBuffer.lookupTransform(cfg.odom_frame_id, cfg.sensor_frame_id, ros::Time(0));
-            cam2rbt = tfBuffer.lookupTransform(cfg.robot_frame_id, cfg.sensor_frame_id, ros::Time(0));
             map2odom = tfBuffer.lookupTransform(cfg.odom_frame_id, cfg.map_frame_id, ros::Time(0));
             rbt2cam = tfBuffer.lookupTransform(cfg.sensor_frame_id, cfg.robot_frame_id, ros::Time(0));
+
             tf2::doTransform(rbt_in_rbt, rbt_in_cam, rbt2cam);
-            trajArbiter->updateEgocircleCalib(rbt_in_cam);
         } catch (tf2::TransformException &ex) {
             ROS_WARN("%s", ex.what());
             ros::Duration(0.1).sleep();
@@ -225,30 +237,38 @@ namespace potential_gap
         std::vector<potential_gap::Gap> manip_set;
         manip_set = observed_gaps;
 
-        for (int i = 0; i < manip_set.size(); i++)
-        {
-            gapManip->reduceGap(manip_set.at(i), goalselector->rbtFrameLocalGoal());
-            gapManip->convertRadialGap(manip_set.at(i));
-            gapManip->radialExtendGap(manip_set.at(i));
-            gapManip->setGapWaypoint(manip_set.at(i), goalselector->rbtFrameLocalGoal());
+        try {
+            for (size_t i = 0; i < manip_set.size(); i++)
+            {
+                gapManip->reduceGap(manip_set.at(i), goalselector->rbtFrameLocalGoal());
+                gapManip->convertAxialGap(manip_set.at(i));
+                gapManip->radialExtendGap(manip_set.at(i));
+                gapManip->setGapWaypoint(manip_set.at(i), goalselector->rbtFrameLocalGoal());
+            }
+        } catch(...) {
+            ROS_FATAL_STREAM("gapManipulate");
         }
+
         goalvisualizer->drawGapGoals(manip_set);
         gapvisualizer->drawManipGaps(manip_set);
         return manip_set;
     }
 
+    // std::vector<geometry_msgs::PoseArray> 
     std::vector<std::vector<double>> Planner::initialTrajGen(std::vector<potential_gap::Gap> vec, std::vector<geometry_msgs::PoseArray>& res) {
         boost::mutex::scoped_lock gapset(gapset_mutex);
         std::vector<geometry_msgs::PoseArray> ret_traj(vec.size());
         std::vector<std::vector<double>> ret_traj_scores(vec.size());
         geometry_msgs::PoseStamped rbt_in_cam_lc = rbt_in_cam; // lc as local copy
-
-        for (int i = 0; i < vec.size(); i++) {
-            auto tmp = gapTrajSyn->generateTrajectory(vec.at(i), rbt_in_cam_lc);
-            tmp = gapTrajSyn->forwardPassTrajectory(tmp);
-            auto rbt_traj = gapTrajSyn->transformBackTrajectory(tmp, cam2rbt);
-            ret_traj_scores.at(i) = trajArbiter->scoreTrajectory(rbt_traj);
-            ret_traj.at(i) = gapTrajSyn->transformBackTrajectory(tmp, cam2odom);
+        try {
+            for (size_t i = 0; i < vec.size(); i++) {
+                auto tmp = gapTrajSyn->generateTrajectory(vec.at(i), rbt_in_cam_lc);
+                tmp = gapTrajSyn->forwardPassTrajectory(tmp);
+                ret_traj_scores.at(i) = trajArbiter->scoreTrajectory(tmp);
+                ret_traj.at(i) = gapTrajSyn->transformBackTrajectory(tmp, cam2odom);
+            }
+        } catch (...) {
+            ROS_FATAL_STREAM("initialTrajGen");
         }
 
         trajvisualizer->pubAllScore(ret_traj, ret_traj_scores);
@@ -270,22 +290,26 @@ namespace potential_gap
         }
 
         std::vector<double> result_score(prr.size());
-        int base_count = 20;
-
-        for (int i = 0; i < result_score.size(); i++) {
-            int counts = std::min(cfg.planning.num_feasi_check, int(score.at(i).size()));
-            result_score.at(i) = std::accumulate(score.at(i).begin(), score.at(i).begin() + counts, double(0));
-            result_score.at(i) = prr.at(i).poses.size() == 0 ? -1000 : result_score.at(i);
+        
+        try {
+            if (omp_get_dynamic()) omp_set_dynamic(0);
+            for (size_t i = 0; i < result_score.size(); i++) {
+                int counts = std::min(cfg.planning.num_feasi_check, int(score.at(i).size()));
+                result_score.at(i) = std::accumulate(score.at(i).begin(), score.at(i).begin() + counts, double(0));
+                result_score.at(i) = prr.at(i).poses.size() == 0 ? -std::numeric_limits<double>::infinity() : result_score.at(i);
+            }
+        } catch (...) {
+            ROS_FATAL_STREAM("pickTraj");
         }
 
         auto iter = std::max_element(result_score.begin(), result_score.end());
         int idx = std::distance(result_score.begin(), iter);
 
-        if (result_score.at(idx) < -1000) {
+        if (result_score.at(idx) == -std::numeric_limits<double>::infinity()) {
             ROS_WARN_STREAM("No executable trajectory, values: ");
-            // for (auto val : result_score) {
-            //     ROS_INFO_STREAM("Score: " << val);
-            // }
+            for (auto val : result_score) {
+                ROS_INFO_STREAM("Score: " << val);
+            }
             ROS_INFO_STREAM("------------------");
         }
 
@@ -295,79 +319,79 @@ namespace potential_gap
     geometry_msgs::PoseArray Planner::compareToOldTraj(geometry_msgs::PoseArray incoming) {
         auto curr_traj = getCurrentTraj();
 
-        // Both Args are in Odom frame
-        auto incom_rbt = gapTrajSyn->transformBackTrajectory(incoming, odom2rbt);
-        incom_rbt.header.frame_id = cfg.robot_frame_id;
-        auto incom_score = trajArbiter->scoreTrajectory(incom_rbt);
+        try {
+            // Both Args are in Odom frame
+            auto incom_rbt = gapTrajSyn->transformBackTrajectory(incoming, odom2rbt);
+            incom_rbt.header.frame_id = cfg.robot_frame_id;
+            auto incom_score = trajArbiter->scoreTrajectory(incom_rbt);
+            // int counts = std::min(cfg.planning.num_feasi_check, (int) std::min(incom_score.size(), curr_score.size()));
 
-        int counts = std::min(cfg.planning.num_feasi_check, (int) incom_score.size());
-        auto incom_subscore = std::accumulate(incom_score.begin(), incom_score.begin() + counts, double(0));
+            int counts = std::min(cfg.planning.num_feasi_check, (int) incom_score.size());
+            auto incom_subscore = std::accumulate(incom_score.begin(), incom_score.begin() + counts, double(0));
 
-        if (curr_traj.poses.size() == 0) {
-            if (incom_subscore < -1000) {
-                // for (auto v : incom_score) {
-                //     ROS_INFO_STREAM("Pose Score: " << v);
-                // }
-                auto empty_traj = geometry_msgs::PoseArray();
-                ROS_WARN_STREAM("No old traj, incoming subscore inf");
-                setCurrentTraj(empty_traj);
-                return empty_traj;
-            } else {
+            if (curr_traj.poses.size() == 0) {
+                if (incom_subscore == -std::numeric_limits<double>::infinity()) {
+                    auto empty_traj = geometry_msgs::PoseArray();
+                    setCurrentTraj(empty_traj);
+                    return empty_traj;
+                } else {
+                    setCurrentTraj(incoming);
+                    trajectory_pub.publish(incoming);
+                    ROS_WARN_STREAM("Old Traj length 0");
+                    return incoming;
+                }
+            } 
+
+            auto curr_rbt = gapTrajSyn->transformBackTrajectory(curr_traj, odom2rbt);
+            curr_rbt.header.frame_id = cfg.robot_frame_id;
+            int start_position = egoTrajPosition(curr_rbt);
+            geometry_msgs::PoseArray reduced_curr_rbt = curr_rbt;
+            reduced_curr_rbt.poses = std::vector<geometry_msgs::Pose>(curr_rbt.poses.begin() + start_position, curr_rbt.poses.end());
+            if (reduced_curr_rbt.poses.size() < 2) {
+                ROS_WARN_STREAM("Old Traj short");
                 setCurrentTraj(incoming);
-                trajectory_pub.publish(incoming);
-                ROS_WARN_STREAM("Old Traj length 0");
                 return incoming;
             }
-        } 
+            auto curr_score = trajArbiter->scoreTrajectory(reduced_curr_rbt);
+            counts = std::min(cfg.planning.num_feasi_check, (int) std::min(incom_score.size(), curr_score.size()));
+            auto curr_subscore = std::accumulate(curr_score.begin(), curr_score.begin() + counts, double(0));
+            incom_subscore = std::accumulate(incom_score.begin(), incom_score.begin() + counts, double(0));
 
-        auto curr_rbt = gapTrajSyn->transformBackTrajectory(curr_traj, odom2rbt);
-        curr_rbt.header.frame_id = cfg.robot_frame_id;
-        int start_position = egoTrajPosition(curr_rbt);
-        geometry_msgs::PoseArray reduced_curr_rbt = curr_rbt;
-        reduced_curr_rbt.poses = std::vector<geometry_msgs::Pose>(curr_rbt.poses.begin() + start_position, curr_rbt.poses.end());
-        if (reduced_curr_rbt.poses.size() < 2) {
-            ROS_WARN_STREAM("Old Traj short");
-            setCurrentTraj(incoming);
-            return incoming;
+            std::vector<std::vector<double>> ret_traj_scores(2);
+            ret_traj_scores.at(0) = incom_score;
+            ret_traj_scores.at(1) = curr_score;
+            std::vector<geometry_msgs::PoseArray> viz_traj(2);
+            viz_traj.at(0) = incom_rbt;
+            viz_traj.at(1) = reduced_curr_rbt;
+            trajvisualizer->pubAllScore(viz_traj, ret_traj_scores);
+
+            ROS_DEBUG_STREAM("Curr Score: " << curr_subscore << ", incom Score:" << incom_subscore);
+
+            if (curr_subscore == -std::numeric_limits<double>::infinity() && incom_subscore == -std::numeric_limits<double>::infinity()) {
+                ROS_WARN_STREAM("Both Failed");
+                auto empty_traj = geometry_msgs::PoseArray();
+                setCurrentTraj(empty_traj);
+                return empty_traj;
+            }
+
+            if (incom_subscore > curr_subscore + counts) {
+                ROS_WARN_STREAM("Swap to new for better score: " << incom_subscore << " > " << curr_subscore << " + " << counts);
+                setCurrentTraj(incoming);
+                trajectory_pub.publish(incoming);
+                return incoming;
+            }
+
+            trajectory_pub.publish(curr_traj);
+        } catch (...) {
+            ROS_FATAL_STREAM("compareToOldTraj");
         }
-
-        auto curr_score = trajArbiter->scoreTrajectory(reduced_curr_rbt);
-        counts = std::min(cfg.planning.num_feasi_check, (int) std::min(incom_score.size(), curr_score.size()));
-        auto curr_subscore = std::accumulate(curr_score.begin(), curr_score.begin() + counts, double(0));
-        incom_subscore = std::accumulate(incom_score.begin(), incom_score.begin() + counts, double(0));
-
-        std::vector<std::vector<double>> ret_traj_scores(2);
-        ret_traj_scores.at(0) = incom_score;
-        ret_traj_scores.at(1) = curr_score;
-        std::vector<geometry_msgs::PoseArray> viz_traj(2);
-        viz_traj.at(0) = incom_rbt;
-        viz_traj.at(1) = reduced_curr_rbt;
-        trajvisualizer->pubAllScore(viz_traj, ret_traj_scores);
-
-        ROS_DEBUG_STREAM("Curr Score: " << curr_subscore << ", incom Score:" << incom_subscore);
-
-        if (curr_subscore < -1000 && incom_subscore < -1000) {
-            ROS_WARN_STREAM("Both Failed");
-            auto empty_traj = geometry_msgs::PoseArray();
-            setCurrentTraj(empty_traj);
-            return empty_traj;
-        }
-
-        if (incom_subscore > curr_subscore + counts) {
-            ROS_WARN_STREAM("Swap to new for better score: " << incom_subscore << " > " << curr_subscore << " + " << counts);
-            setCurrentTraj(incoming);
-            trajectory_pub.publish(incoming);
-            return incoming;
-        }
-
-        trajectory_pub.publish(curr_traj);
-        
         return curr_traj;
     }
 
     int Planner::egoTrajPosition(geometry_msgs::PoseArray curr) {
         std::vector<double> pose_diff(curr.poses.size());
-        for (int i = 0; i < pose_diff.size(); i++) // i will always be positive, so this is fine
+        // ROS_INFO_STREAM("Ref_pose length: " << ref_pose.poses.size());
+        for (size_t i = 0; i < pose_diff.size(); i++) // i will always be positive, so this is fine
         {
             pose_diff[i] = sqrt(pow(curr.poses.at(i).position.x, 2) + 
                                 pow(curr.poses.at(i).position.y, 2));
@@ -391,9 +415,9 @@ namespace potential_gap
     {
         observed_gaps.clear();
         setCurrentTraj(geometry_msgs::PoseArray());
-        ROS_DEBUG_STREAM("log_vel_comp size: " << log_vel_comp.size());
+        ROS_INFO_STREAM("log_vel_comp size: " << log_vel_comp.size());
         log_vel_comp.clear();
-        ROS_DEBUG_STREAM("log_vel_comp size after clear: " << log_vel_comp.size() << ", is full: " << log_vel_comp.capacity());
+        ROS_INFO_STREAM("log_vel_comp size after clear: " << log_vel_comp.size() << ", is full: " << log_vel_comp.capacity());
         return;
     }
 
@@ -437,11 +461,6 @@ namespace potential_gap
 
         geometry_msgs::PoseStamped rbt_in_cam_lc = rbt_in_cam;
         auto cmd_vel = trajController->controlLaw(curr_pose, ctrl_target_pose, stored_scan_msgs, rbt_in_cam_lc);
-        
-        int last_pose = orig_ref.poses.size() - 1;
-        
-        double dist = sqrt(pow(orig_ref.poses[ctrl_idx].position.x - orig_ref.poses[last_pose].position.x, 2) + 
-                        pow(orig_ref.poses[ctrl_idx].position.y - orig_ref.poses[last_pose].position.y, 2));
 
         return cmd_vel;
     }
@@ -466,8 +485,6 @@ namespace potential_gap
         auto score_set = initialTrajGen(gap_set, traj_set);
         
         auto picked_traj = pickTraj(traj_set, score_set);
-
-        ROS_INFO_STREAM("Picked Traj length: " << picked_traj.poses.size());
 
         auto final_traj = compareToOldTraj(picked_traj);
         

@@ -23,36 +23,11 @@ namespace potential_gap {
             GapManipulator& operator=(GapManipulator & other) {cfg_ = other.cfg_;};
             GapManipulator(const GapManipulator &t) {cfg_ = t.cfg_;};
 
-            /**
-             * @brief Update latest egocicle measurement and store a share locally
-             * @param egocircle 
-             */
             void updateEgoCircle(boost::shared_ptr<sensor_msgs::LaserScan const>);
 
-            /**
-             * @brief Given a Gap and a local waypoint on the relevant global plan, calculate a gap goal and assign to the gap
-             * @param gap in consideration
-             * @param waypoint
-             */
             void setGapWaypoint(potential_gap::Gap&, geometry_msgs::PoseStamped);
-
-            /**
-             * @brief Reduce the gap to the appropriate size so that it may display desirable convex properties
-             * @param Gap
-             * @param waypoint
-             */
             void reduceGap(potential_gap::Gap&, geometry_msgs::PoseStamped);
-
-            /**
-             * @brief Convert radial gap to swept gaps
-             * @param gap
-             */
-            void convertRadialGap(potential_gap::Gap&);
-
-            /**
-             * @brief Radial Extend on Gaps
-             * @param gap
-             */
+            void convertAxialGap(potential_gap::Gap&);
             void radialExtendGap(potential_gap::Gap&);
         private:
             boost::shared_ptr<sensor_msgs::LaserScan const> msg;

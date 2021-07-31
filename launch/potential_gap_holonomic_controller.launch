@@ -4,7 +4,7 @@
   <!--<include file="$(find turtlebot_navigation)/launch/includes/velocity_smoother.launch.xml"/>-->
 
   <arg name="vel_topic" default="/robot0/cmd_vel"/>
-  <arg name="holonomic" default="true"/>
+  <arg name="holonomic" default="$(optenv GM_PARAM_HOLONOMIC true)"/>
   <arg name="projection_operator" default="false"/>
 
   <node name="egocircle_node" pkg="egocircle" type="ego_circle">
@@ -20,8 +20,7 @@
   <arg name="full_fov" default="$(optenv GM_PARAM_FULL_FOV false)"/>
   <arg name="inf_ratio" value="1.2" unless="$(arg planning_inflated)"/>
   <arg name="inf_ratio" value="0.0" if="$(arg planning_inflated)"/>
-  <arg name="reduction_threshold" default="$(optenv GM_PARAM_REDUCTION_THRESHOLD 3.1415926)"/>
-  <arg name="reduction_target" default="$(optenv GM_PARAM_REDUCTION_TARGET 3.1415926)"/>
+
 
   <arg name="debug" default="false"/>
 
@@ -65,8 +64,6 @@
       <param name="PotentialGapPlanner/inf_ratio" value="$(arg inf_ratio)"/>
       <param name="PotentialGapPlanner/full_fov" value="$(arg full_fov)"/>
       <param name="PotentialGapPlanner/far_feasible" value="$(arg far_feasible)"/>
-      <param name="PotentialGapPlanner/reduction_threshold" value="$(arg reduction_threshold)"/>
-      <param name="PotentialGapPlanner/reduction_target" value="$(arg reduction_target)"/>
 
 
       <!-- <param name="PotentialGapPlanner/v_lin_x_const" value="0.0"/>

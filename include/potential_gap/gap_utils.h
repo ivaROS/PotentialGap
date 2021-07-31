@@ -22,24 +22,11 @@ namespace potential_gap {
 
         GapUtils(const GapUtils &t) {cfg_ = t.cfg_;};
 
-        /**
-         * @brief Detection of Gaps
-         * @param Laserscan
-         * @param gaps to return
-         */
         void hybridScanGap(boost::shared_ptr<sensor_msgs::LaserScan const>, std::vector<potential_gap::Gap>&);
 
-        /**
-         * @brief Simplification of gaps
-         * @param Laserscan
-         * @param gaps to simplify and return
-         */
         void mergeGapsOneGo(boost::shared_ptr<sensor_msgs::LaserScan const>,
         std::vector<potential_gap::Gap>&);
 
-        /**
-         * @brief Setters for threshold
-         */
         void setMergeThreshold(float);
         void setIdxThreshold(int);
 

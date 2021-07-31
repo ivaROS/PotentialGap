@@ -66,7 +66,6 @@ namespace potential_gap
         public: 
             using Visualizer::Visualizer;
             GoalVisualizer(ros::NodeHandle& nh, const potential_gap::PotentialGapConfig& cfg);
-
             void localGoal(geometry_msgs::PoseStamped);
             void drawGapGoal(visualization_msgs::MarkerArray&, potential_gap::Gap);
             void drawGapGoals(std::vector<potential_gap::Gap>);

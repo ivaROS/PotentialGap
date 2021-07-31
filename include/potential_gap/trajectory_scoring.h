@@ -32,31 +32,14 @@ namespace potential_gap{
         TrajectoryArbiter& operator=(TrajectoryArbiter other) {cfg_ = other.cfg_;};
         TrajectoryArbiter(const TrajectoryArbiter &t) {cfg_ = t.cfg_;};
         
-        /**
-         * @brief Update egocircle
-         */
         void updateEgoCircle(boost::shared_ptr<sensor_msgs::LaserScan const>);
-
-        /**
-         * @brief Update assciated gaps
-         */
         void updateGapContainer(const std::vector<potential_gap::Gap>);
-
-        void updateEgocircleCalib(geometry_msgs::PoseStamped);
-        /**
-         * @brief Update gaps
-         */
         void updateLocalGoal(geometry_msgs::PoseStamped, geometry_msgs::TransformStamped);
 
-        /**
-         * @brief Score gaps
-         */
         std::vector<double> scoreGaps();
         potential_gap::Gap returnAndScoreGaps();
         
-        /**
-         * @brief Score trajectories with chapter score method
-         */
+        // Full Scoring
         std::vector<double> scoreTrajectories(std::vector<geometry_msgs::PoseArray>);
         geometry_msgs::PoseStamped getLocalGoal() {return local_goal; }; // in robot frame
         std::vector<double> scoreTrajectory(geometry_msgs::PoseArray traj);
@@ -77,7 +60,6 @@ namespace potential_gap{
             int search_idx = -1;
 
             double r_inscr, rmax, cobs, w;
-            geometry_msgs::PoseStamped rbt_in_cam_lc;
     };
 }
 

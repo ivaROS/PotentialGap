@@ -62,8 +62,7 @@ namespace potential_gap {
                     detected_gap.setMinSafeDist(min_dist);
                     // Inscribed radius gets enforced here, or unless using inflated egocircle,
                     // then no need for range diff
-                    if (detected_gap.get_dist_side() > 2 * cfg_->rbt.r_inscr || 
-                        cfg_->planning.planning_inflated) observed_gaps.push_back(detected_gap);
+                    if (detected_gap.get_dist_side() > 2 * cfg_->rbt.r_inscr || cfg_->planning.planning_inflated) observed_gaps.push_back(detected_gap);
                 }
                 else // previously not marked a gap, not marking the gap
                 {
@@ -94,12 +93,14 @@ namespace potential_gap {
                 float end_side_dist = observed_gaps[observed_gaps.size() - 1].LDist();
                 int start_side_idx = observed_gaps[0].RIdx();
                 int end_side_idx = observed_gaps[observed_gaps.size() - 1].LIdx();
-                int total_size = (int)(stored_scan_msgs.ranges.size() - 1) - end_side_idx + start_side_idx;
+
+                // float result = (end_side_dist - start_side_dist) * start_side_idx / (observed_gaps.size() - end_side_idx + start_side_idx) + start_side_dist;
+                int total_size = 511 - end_side_idx + start_side_idx;
                 float result = (end_side_dist - start_side_dist) * (float (start_side_idx) / float (total_size)) + start_side_dist;
+                observed_gaps[0].setLeftObs();
+                observed_gaps[observed_gaps.size() - 1].setRightObs();
                 observed_gaps[observed_gaps.size() - 1].addRightInformation(511, result);
-                observed_gaps[observed_gaps.size() - 1].mode.wrap = true;
-                observed_gaps[0]._ldist = result;
-                observed_gaps[0].mode.wrap = true;;
+                observed_gaps[0].setLDist(result);
             }
         }
     }
@@ -108,6 +109,10 @@ namespace potential_gap {
         boost::shared_ptr<sensor_msgs::LaserScan const> sharedPtr_laser,
         std::vector<potential_gap::Gap>& observed_gaps)
     {
+        // int left_idx = -1;
+        // int right_idx = -1;
+        // float right_dist = 3;
+        // float left_dist = 3; // TODO: Make this reconfigurable
         int observed_size = (int) observed_gaps.size();
         std::vector<potential_gap::Gap> second_gap;
 
@@ -119,10 +124,9 @@ namespace potential_gap {
         bool last_type_left = true;
         int left_counter = 0;
         bool changed = true;
-        // Forward Pass
         for (int i = 0; i < (int) observed_gaps.size(); i++)
         {
-            if (mark_to_start && observed_gaps.at(i).isRadial() && observed_gaps.at(i).isLeftType())
+            if (mark_to_start && observed_gaps.at(i).isAxial() && observed_gaps.at(i).isLeftType())
             {
                 // Wait until the first mergable gap aka swept left type gap
                 mark_to_start = false;
@@ -130,7 +134,7 @@ namespace potential_gap {
             } else {
                 if (!mark_to_start)
                 {
-                    if (observed_gaps.at(i).isRadial())
+                    if (observed_gaps.at(i).isAxial())
                     {
                         if (observed_gaps.at(i).isLeftType())
                         {
@@ -149,7 +153,7 @@ namespace potential_gap {
                                 int end_idx = std::max(second_gap[j].RIdx(), observed_gaps[i].LIdx());
                                 auto farside_iter = std::min_element(stored_scan_msgs.ranges.begin() + start_idx, stored_scan_msgs.ranges.begin() + end_idx);
                                 bool second_test = curr_rdist <= (*farside_iter - coefs * cfg_->rbt.r_inscr) && second_gap[j].LDist() <= (*farside_iter - coefs * cfg_->rbt.r_inscr);
-                                bool dist_diff = second_gap[j].isLeftType() || !second_gap[j].isRadial();
+                                bool dist_diff = second_gap[j].isLeftType() || !second_gap[j].isAxial();
                                 bool idx_diff = observed_gaps[i].RIdx() - second_gap[j].LIdx() < cfg_->gap_manip.max_idx_diff;
                                 if (second_test && dist_diff && idx_diff) {
                                     last_mergable = j;
@@ -168,7 +172,7 @@ namespace potential_gap {
                     {
                         // If not axial gap, 
                         float curr_rdist = observed_gaps.at(i).RDist();
-                        if (std::abs(curr_rdist - second_gap.back().LDist()) < 0.2 && second_gap.back().isRadial() && second_gap.back().isLeftType())
+                        if (std::abs(curr_rdist - second_gap.back().LDist()) < 0.2 && second_gap.back().isAxial() && second_gap.back().isLeftType())
                         {
                             second_gap.back().addRightInformation(observed_gaps[i].RIdx(), observed_gaps[i].RDist());
                         } else {
@@ -184,66 +188,10 @@ namespace potential_gap {
             }
             last_type_left = observed_gaps[i].isLeftType();
         }
-
-        // Close up backwards radial gaps
-        // Unmergable
-        float threshold_val = cfg_->rbt.r_inscr;
-        int unmerg_idx = -1;
-        float back_gap_dist = stored_scan_msgs.range_max;
-        float last_dist = stored_scan_msgs.range_max;
-        for (int i = 0; i < second_gap.size(); i++){
-            if (second_gap.at(i).isLeftType() && second_gap.at(i).isRadial() && !second_gap.at(i).mode.wrap
-                || second_gap.at(i)._right_idx > float(stored_scan_msgs.ranges.size()) * 0.25
-                || !(second_gap.at(i)._rdist - last_dist < threshold_val)) {
-                break;
-            } else {
-                unmerg_idx = i;
-            }
-        }
-        
-        int back_unmerg_idx = -1;
-        last_dist = stored_scan_msgs.range_max;
-        for (int i = second_gap.size() - 1; i >= 0; i--) {
-            if (!second_gap.at(i).isLeftType() && second_gap.at(i).isRadial() && !second_gap.at(i).mode.wrap
-                || second_gap.at(i)._left_idx < float(stored_scan_msgs.ranges.size()) * 0.75 
-                || !(second_gap.at(i)._ldist - last_dist < threshold_val)) {
-                break;
-            } else {
-                last_dist = second_gap.at(i)._ldist;
-                back_unmerg_idx = i;
-            }
-        }
-
-        // Process gotta be iteratively backwards
-        while (unmerg_idx >= 0 && back_unmerg_idx < second_gap.size()) {
-            auto min_dist_f = *std::min_element(stored_scan_msgs.ranges.begin(), stored_scan_msgs.ranges.begin() + second_gap.at(unmerg_idx)._right_idx - 1);
-            auto min_dist_b = *std::min_element(stored_scan_msgs.ranges.begin() + second_gap.at(back_unmerg_idx)._left_idx + 1, stored_scan_msgs.ranges.end());
-            auto min_dist_rev = std::min(min_dist_f, min_dist_b);
-            if (min_dist_rev > second_gap.at(unmerg_idx)._rdist && min_dist_rev > second_gap.at(back_unmerg_idx)._ldist) {
-                float forward_r = second_gap.at(unmerg_idx)._right_idx + (int) stored_scan_msgs.ranges.size() - second_gap.at(back_unmerg_idx)._left_idx;
-                float front_lr = second_gap.at(unmerg_idx)._rdist + (second_gap.at(back_unmerg_idx)._ldist - second_gap.at(unmerg_idx)._rdist) * second_gap.at(unmerg_idx)._right_idx / forward_r;
-                second_gap.at(unmerg_idx)._left_idx = 0;
-                second_gap.at(unmerg_idx)._ldist = front_lr;
-                second_gap.at(unmerg_idx).convex.convex_lidx = 0;
-                second_gap.at(unmerg_idx).convex.convex_ldist = front_lr;
-                second_gap.at(back_unmerg_idx)._right_idx = stored_scan_msgs.ranges.size() - 1;
-                second_gap.at(back_unmerg_idx)._rdist = front_lr;
-                second_gap.at(back_unmerg_idx).convex.convex_ridx = stored_scan_msgs.ranges.size() - 1;
-                second_gap.at(back_unmerg_idx).convex.convex_rdist = front_lr;
-                second_gap.erase(second_gap.begin() + back_unmerg_idx + 1, second_gap.end());
-                second_gap.erase(second_gap.begin(), second_gap.begin() + unmerg_idx);
-                second_gap.begin()->mode.wrap = true;
-                (second_gap.end() - 1)->mode.wrap = true;
-                break;
-            } else if (min_dist_rev < second_gap.at(back_unmerg_idx)._ldist) {
-                unmerg_idx--;
-            } else if (min_dist_rev < second_gap.at(unmerg_idx)._rdist) {
-                back_unmerg_idx++;
-            }
-        }
-        
         observed_gaps.clear();
         observed_gaps = second_gap;
+
     }
+
 
 }

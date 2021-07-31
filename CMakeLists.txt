@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(potential_gap)
 
-## Compile as C++11, supported in ROS Kinetic and newer
 add_compile_options(-std=c++17)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fopenmp")
@@ -9,13 +8,10 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fopenmp")
 find_package(OpenMP REQUIRED)
 if(OPENMP_FOUND)
   message(STATUS "OPENMP FOUND")
-  set(OpenMP_FLAGS ${OpenMP_CXX_FLAGS})  # or if you use C: ${OpenMP_C_FLAGS}
+  set(OpenMP_FLAGS ${OpenMP_CXX_FLAGS})
   set(OpenMP_LIBS gomp)
 endif()
 
-## Find catkin macros and libraries
-## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
-## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   base_local_planner
   pluginlib
@@ -26,9 +22,7 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
   std_msgs
-  benchmarking_tools
-  trajectory_generator
-  turtlebot_trajectory_generator
+  # benchmarking_tools
   pips_trajectory_msgs
   dynamic_reconfigure
   message_generation
@@ -64,13 +58,13 @@ catkin_package(
 #  LIBRARIES potential_gap
   INCLUDE_DIRS ${EIGEN3_INCLUDE_DIRS}
   DEPENDS OpenMP 
-  CATKIN_DEPENDS base_local_planner dynamic_reconfigure egocircle geometry_msgs nav_msgs roscpp rospy std_msgs sensor_msgs pips_trajectory_msgs trajectory_generator turtlebot_trajectory_generator benchmarking_tools message_runtime
+  CATKIN_DEPENDS base_local_planner dynamic_reconfigure egocircle geometry_msgs nav_msgs roscpp rospy std_msgs sensor_msgs pips_trajectory_msgs message_runtime
 )
 
 
 add_library(potential_gap
   src/planner.cpp
-  # src/trajectory_follower.cpp
+  src/trajectory_follower.cpp
   src/potential_gap.cpp
   src/gap_utils.cpp
   
@@ -83,7 +77,6 @@ add_library(potential_gap
   src/trajectory_controller.cpp
   ) 
 add_dependencies(potential_gap ${PROJECT_NAME}_gencfg)
-
 target_compile_options(potential_gap PRIVATE ${OpenMP_FLAGS})
 target_link_libraries(potential_gap
 ${catkin_LIBRARIES}
