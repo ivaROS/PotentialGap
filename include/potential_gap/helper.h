@@ -22,8 +22,8 @@ namespace potential_gap {
         double _sigma;
         bool _l, _r, _axial;
 
-        polar_gap_field(double x1, double x2, double y1, double y2, double gx, double gy, bool axial, double sigma)
-            : x1(x1), x2(x2), y1(y1), y2(y2), gx(gx), gy(gy), _axial(axial), _sigma(sigma) {}
+        polar_gap_field(double x1, double x2, double y1, double y2, double gx, double gy, bool l, bool r, bool axial, double sigma)
+            : x1(x1), x2(x2), y1(y1), y2(y2), gx(gx), gy(gy), _l(l), _r(r), _axial(axial), _sigma(sigma) {}
 
         void operator()(const state_type &x, state_type &dxdt, const double t)
         {
@@ -72,7 +72,7 @@ namespace potential_gap {
             if (_axial) {
                 pass_gap = (rbt.norm() > std::min(p1.norm(), p2.norm()) + 0.18) && rbt.norm() > goal_pt.norm();
             } else {
-                pass_gap = (rbt.norm() > std::min(p1.norm(), p2.norm()) + 0.18) && rbt.norm() > goal_pt.norm();
+                pass_gap = (rbt.norm() > std::max(p1.norm(), p2.norm()) + 0.18) && rbt.norm() > goal_pt.norm();
             }
 
 

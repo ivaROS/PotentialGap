@@ -22,8 +22,7 @@ PLUGINLIB_EXPORT_CLASS(potential_gap::PotentialGapPlanner, nav_core::BaseLocalPl
 
 namespace potential_gap 
 {
-    PotentialGapPlanner::PotentialGapPlanner()
-    {}
+    PotentialGapPlanner::PotentialGapPlanner(){}
 
     PotentialGapPlanner::~PotentialGapPlanner()
     {
@@ -60,7 +59,6 @@ namespace potential_gap
 
     bool PotentialGapPlanner::computeVelocityCommands(geometry_msgs::Twist & cmd_vel)
     {
-        DURATION_INFO_STREAM("pg_timing", 1);
         if (!planner.initialized())
         {
             ros::NodeHandle pnh("~/" + planner_name);

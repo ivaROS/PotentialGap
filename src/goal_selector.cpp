@@ -14,7 +14,6 @@ namespace potential_gap {
         global_plan.clear();
         global_plan = plan;
         // transform plan to robot frame such as base_link
-        return true;
     }
 
     void GoalSelector::updateEgoCircle(boost::shared_ptr<sensor_msgs::LaserScan const> msg) {
@@ -85,6 +84,7 @@ namespace potential_gap {
         mod_plan.clear();
         mod_plan = global_plan;
 
+
         if (mod_plan.size() == 0) {
             ROS_FATAL_STREAM("Global Plan Length = 0");
         }
@@ -97,7 +97,6 @@ namespace potential_gap {
         for (int i = 0; i < distance.size(); i++) {
             distance.at(i) = dist2rbt(mod_plan.at(i));
         }
-
 
         sensor_msgs::LaserScan stored_scan_msgs = *sharedPtr_laser.get();
         threshold = (double) *std::max_element(stored_scan_msgs.ranges.begin(), stored_scan_msgs.ranges.end());
@@ -136,7 +135,7 @@ namespace potential_gap {
     geometry_msgs::PoseStamped GoalSelector::getCurrentLocalGoal(geometry_msgs::TransformStamped rbt2odom) {
         geometry_msgs::PoseStamped result;
         tf2::doTransform(local_goal, result, rbt2odom);
-        // This returns in odom frame
+        // This should return something in odom frame
         return result;
     }
 

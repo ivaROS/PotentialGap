@@ -18,7 +18,7 @@ TebLocalPlannerROS:
 
     # Robot
 
-    max_vel_x: 0.4 # Changed!
+    max_vel_x: 0.4 # Changed! 0.5
     max_vel_x_backwards: 0.2
     max_vel_theta: 5.0
     acc_lim_x: 1.0
@@ -79,10 +79,10 @@ TebLocalPlannerROS:
     enable_homotopy_class_planning: True
     enable_multithreading: True #True
     simple_exploration: True #was False
-    max_number_classes: 4
+    max_number_classes: 4 #20
     roadmap_graph_no_samples: 15
-    roadmap_graph_area_width: 6
-    h_signature_prescaler: 1 #was 0.5
+    roadmap_graph_area_width: 6 #5
+    h_signature_prescaler: 1 #0.5 #was 0.5
     h_signature_threshold: 0.1 #was .1
     obstacle_keypoint_offset: 0.1
     obstacle_heading_threshold: 0.45 #was 0.45

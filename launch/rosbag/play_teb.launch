@@ -1,9 +1,0 @@
-<launch>
-
-    <param name="/use_sim_time" value="true"/>
-
-    <node pkg="rosbag" type="play" name="timing_bag" output="screen" args="/home/alex/simulation_data/experiment_2021-02-06-00-23-16.bag"/>
-
-    <include file="$(find nav_scripts)/launch/turtlebot_teb_controller.launch"/>
-
-</launch>

@@ -56,9 +56,8 @@ namespace potential_gap {
         Eigen::Vector2f anchor(xg, yg);
         Eigen::Matrix2f r_negpi2;
             r_negpi2 << 0,1,-1,0;
-        auto offset = r_negpi2 * (pr - pl) / (pr - pl).norm();
-        auto mid_anchor = gap.convex.convex_ldist < gap.convex.convex_rdist ? pr : pl;
-        auto goal_pt = gap.mode.rgc ? offset * cfg_->rbt.r_inscr * cfg_->traj.inf_ratio + mid_anchor : offset * cfg_->rbt.r_inscr * cfg_->traj.inf_ratio + anchor;
+        auto offset = r_negpi2 * (pr - pl);
+        auto goal_pt = offset * cfg_->rbt.r_inscr * cfg_->traj.inf_ratio + anchor;
 
         float r1 = gap.convex.convex_ldist;
         float r2 = gap.convex.convex_rdist;
@@ -73,13 +72,14 @@ namespace potential_gap {
             gap.goal.y = localgoal.pose.position.y;
             gap.goal.set = true;
             gap.goal.goalwithin = true;
-            // ROS_INFO_STREAM("Local goal location");
             return;
         }
+
 
         gap.goal.x = goal_pt(0);
         gap.goal.y = goal_pt(1);
         gap.goal.set = true;
+
     }
 
     bool GapManipulator::checkGoalVisibility(geometry_msgs::PoseStamped localgoal) {
@@ -104,6 +104,7 @@ namespace potential_gap {
         int incident_angle = (int) round((goal_angle - scan.angle_min) / scan.angle_increment);
 
         double half_angle = std::asin(cfg_->rbt.r_inscr / dist2goal);
+        // int index = std::ceil(half_angle / scan.angle_increment) * 1.5;
         int index = (int)(scan.ranges.size()) / 8;
         int lower_bound = std::max(incident_angle - index, 0);
         int upper_bound = std::min(incident_angle + index, int(scan.ranges.size() - 1));
@@ -154,14 +155,14 @@ namespace potential_gap {
         gap.convex.convex_ridx = new_r;
         gap.convex.convex_ldist = new_ldist + cfg_->gap_viz.viz_jitter;
         gap.convex.convex_rdist = new_rdist + cfg_->gap_viz.viz_jitter;
-        gap.life_time = 1. / 35;
+        gap.life_time = 50;
         gap.mode.reduced = true;
         return;
     }
 
-    void GapManipulator::convertRadialGap(potential_gap::Gap& gap) {
-        // Return if not radial gap or disabled
-        if (!gap.isRadial() || !cfg_->gap_manip.axial_convert) {
+    void GapManipulator::convertAxialGap(potential_gap::Gap& gap) {
+        // Return if not axial gap or disabled
+        if (!gap.isAxial() || !cfg_->gap_manip.axial_convert) {
             return;
         }
 
@@ -230,7 +231,13 @@ namespace potential_gap {
         std::vector<float> min_dist(upperbound - offset);
 
         if (size == 0) {
+            // This shouldn't happen
             return;
+        }
+
+
+        if (stored_scan_msgs.ranges.size() < 500) {
+            ROS_FATAL_STREAM("Scan range incorrect gap manip");
         }
 
         try{
@@ -239,7 +246,7 @@ namespace potential_gap {
                     2 * near_dist * stored_scan_msgs.ranges.at(i + offset) * cos((i + offset - near_idx) * stored_scan_msgs.angle_increment));
             }
         } catch(...) {
-            ROS_FATAL_STREAM("convertRadialGap outofBound");
+            ROS_FATAL_STREAM("convertAxialGap outofBound");
         }
 
         auto farside_iter = std::min_element(min_dist.begin(), min_dist.end());
@@ -247,12 +254,14 @@ namespace potential_gap {
 
         Eigen::Matrix3f far_near = near_rbt.inverse() * far_rbt;
         float coefs = far_near.block<2, 1>(0, 2).norm();
+        // ROS_INFO_STREAM()
         far_near(0, 2) *= farside / coefs;
         far_near(1, 2) *= farside / coefs;
         Eigen::Matrix3f short_pt = near_rbt * (rot_mat * far_near);
 
         r = float(sqrt(pow(short_pt(0, 2), 2) + pow(short_pt(1, 2), 2)));
         idx = int (std::atan2(short_pt(1, 2), short_pt(0, 2)) / M_PI * half_num_scan) + half_num_scan;
+
 
         // Recalculate end point location based on length
         gap.convex.convex_lidx = left ? near_idx : idx;
@@ -268,7 +277,7 @@ namespace potential_gap {
             gap.goal.discard = true;
         }
 
-        gap.mode.rgc = true;
+        gap.mode.agc = true;
     }
 
     void GapManipulator::radialExtendGap(potential_gap::Gap& selected_gap) {
@@ -304,12 +313,15 @@ namespace potential_gap {
         Eigen::Vector2f qRp = gR - qB;
 
         Eigen::Vector2f pLp = car2pol(qLp);
+        // pLp(1) += M_PI;
         Eigen::Vector2f pRp = car2pol(qRp);
-        
+        // pRp(1) += M_PI;
+
         float phiB = pRp(1) - pLp(1);
 
         Eigen::Vector2f pB = car2pol(-qB);
-        
+        // pB(2) += M_PI;
+
         float thL = pB(1) - gap_size / 4;
         float thR = pB(1) + gap_size / 4;
 
@@ -330,6 +342,11 @@ namespace potential_gap {
         selected_gap.mode.convex = true;
 
         selected_gap.qB = qB;
+        ROS_DEBUG_STREAM("l: " << selected_gap._left_idx << " to " << selected_gap.convex_lidx
+         << ", r: " << selected_gap._right_idx << " to " << selected_gap.convex_ridx);
+        
+        ROS_DEBUG_STREAM("ldist: " << selected_gap._ldist << " to " << selected_gap.convex_ldist
+        << ", rdist: " << selected_gap._rdist << " to " << selected_gap.convex_rdist);
 
         return;
     }

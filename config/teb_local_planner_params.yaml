@@ -1,6 +1,6 @@
 TebLocalPlannerROS:
 
-    xy_goal_tolerance: .5
+    xy_goal_tolerance: .1
 
     odom_topic: odom
     map_frame: /map
@@ -18,7 +18,7 @@ TebLocalPlannerROS:
 
     # Robot
 
-    max_vel_x: 0.4 # Changed!
+    max_vel_x: 0.3 # Changed!
     max_vel_x_backwards: 0.2
     max_vel_theta: 5.0
     acc_lim_x: 1.0

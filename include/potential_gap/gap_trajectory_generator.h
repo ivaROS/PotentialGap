@@ -4,8 +4,8 @@
 #include <ros/ros.h>
 #include <boost/numeric/odeint.hpp>
 
-#include <traj_generator.h>
-#include <turtlebot_trajectory_generator/near_identity.h>
+// #include <traj_generator.h>
+// #include <turtlebot_trajectory_generator/near_identity.h>
 #include <geometry_msgs/PoseArray.h>
 #include <potential_gap/helper.h>
 #include <ros/ros.h>
@@ -28,25 +28,6 @@
 
 namespace potential_gap {
 
-    class gap_traj_fun : public virtual turtlebot_trajectory_generator::desired_traj_func
-    {
-        geometry_msgs::PoseArray desired_traj;
-    public:
-        gap_traj_fun(geometry_msgs::PoseArray _traj)
-        {
-            desired_traj = _traj;
-        }
-
-        void dState(const turtlebot_trajectory_generator::ni_state &x, turtlebot_trajectory_generator::ni_state &dxdt, const double t)
-        {
-            int idx = t / 0.2 + 1;
-            idx = std::min(idx, (int) desired_traj.poses.size());
-            dxdt[6] = desired_traj.poses[idx - 1].position.x - x[0];
-            dxdt[7] = desired_traj.poses[idx - 1].position.y - x[1];
-
-        }
-    };
-
     class TrajectoryGenerator {
         public:
             TrajectoryGenerator(){};
@@ -56,17 +37,7 @@ namespace potential_gap {
             TrajectoryGenerator& operator=(TrajectoryGenerator & other) {cfg_ = other.cfg_;};
             TrajectoryGenerator(const TrajectoryGenerator &t) {cfg_ = t.cfg_;};
 
-            /**
-             * @brief Generate Trajectory for single Gap
-             * @param Gap
-             * @param waypoint
-             */
             virtual geometry_msgs::PoseArray generateTrajectory(potential_gap::Gap, geometry_msgs::PoseStamped) = 0;
-
-            /**
-             * @brief Generate vector of trajecctory for a vector of gaps
-             * @param gaps
-             */
             virtual std::vector<geometry_msgs::PoseArray> generateTrajectory(std::vector<potential_gap::Gap>) = 0;
         protected:
             const PotentialGapConfig* cfg_;
@@ -75,28 +46,10 @@ namespace potential_gap {
     class GapTrajGenerator : public TrajectoryGenerator {
         using TrajectoryGenerator::TrajectoryGenerator;
         public:
-            
-            /**
-             * @brief Update to the latest TF infomation, planning frame to odom frame
-             * @param tf
-             */
             void updateTF(geometry_msgs::TransformStamped tf) {planning2odom = tf;};
-
-            
             geometry_msgs::PoseArray generateTrajectory(potential_gap::Gap, geometry_msgs::PoseStamped);
             std::vector<geometry_msgs::PoseArray> generateTrajectory(std::vector<potential_gap::Gap>);
-            
-            /**
-             * @brief Move trajectory from egoframe to odom frame
-             * @param Trajectory
-             * @param tf
-             */
             geometry_msgs::PoseArray transformBackTrajectory(geometry_msgs::PoseArray, geometry_msgs::TransformStamped);
-
-            /**
-             * @brief Subsample the trajectory so it is fitted for following
-             * @param trajectory
-             */
             geometry_msgs::PoseArray forwardPassTrajectory(geometry_msgs::PoseArray);
 
         private: 

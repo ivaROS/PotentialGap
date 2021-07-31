@@ -2,22 +2,22 @@
 
 namespace potential_gap{
     geometry_msgs::PoseArray GapTrajGenerator::generateTrajectory(potential_gap::Gap selectedGap, geometry_msgs::PoseStamped curr_pose) {
+        // return geometry_msgs::PoseArray();
         geometry_msgs::PoseArray posearr;
         posearr.header.stamp = ros::Time::now();
         
         double coefs = cfg_->traj.scale;
         write_trajectory corder(posearr, cfg_->robot_frame_id, coefs);
-        // If sensor frame == rbt frame
         posearr.header.frame_id = cfg_->traj.synthesized_frame ? cfg_->sensor_frame_id : cfg_->robot_frame_id;
 
-        if (selectedGap.goal.discard || selectedGap.get_dist_side() < 1.5 *  cfg_->rbt.r_inscr) {
+        if (selectedGap.goal.discard) {
             return posearr;
         }
 
         state_type x = {curr_pose.pose.position.x + 1e-5, curr_pose.pose.position.y + 1e-6}; 
 
         if (selectedGap.goal.goalwithin) {
-            // Goal to Goal
+            // ROS_INFO_STREAM("Goal to Goal");
             g2g inte_g2g(
                 selectedGap.goal.x * coefs,
                 selectedGap.goal.y * coefs);
@@ -36,7 +36,6 @@ namespace potential_gap{
         x2 = (selectedGap.convex.convex_rdist) * cos(-((float) half_num_scan - selectedGap.convex.convex_ridx) / half_num_scan * M_PI);
         y2 = (selectedGap.convex.convex_rdist) * sin(-((float) half_num_scan - selectedGap.convex.convex_ridx) / half_num_scan * M_PI);
 
-        // RE gaps need to be shifted
         if (selectedGap.mode.convex) {
             x = {- selectedGap.qB(0) - 1e-6, - selectedGap.qB(1) + 1e-6};
             x1 -= selectedGap.qB(0);
@@ -45,13 +44,16 @@ namespace potential_gap{
             y2 -= selectedGap.qB(1);
             selectedGap.goal.x -= selectedGap.qB(0);
             selectedGap.goal.y -= selectedGap.qB(1);
+
         }
         
         polar_gap_field inte(x1 * coefs, x2 * coefs,
                             y1 * coefs, y2 * coefs,
                             selectedGap.goal.x * coefs,
                             selectedGap.goal.y * coefs,
-                            selectedGap.isRadial(),
+                            selectedGap.getLeftObs(),
+                            selectedGap.getRightObs(),
+                            selectedGap.isAxial(),
                             cfg_->gap_manip.sigma);
         boost::numeric::odeint::integrate_const(boost::numeric::odeint::euler<state_type>(),
             inte, x, 0.0,
@@ -59,7 +61,6 @@ namespace potential_gap{
             cfg_->traj.integrate_stept, corder);
 
         if (selectedGap.mode.convex) {
-            // RE Gaps need to be brought back
             for (auto & p : posearr.poses) {
                 p.position.x += selectedGap.qB(0);
                 p.position.y += selectedGap.qB(1);
@@ -69,6 +70,7 @@ namespace potential_gap{
         return posearr;
     }
 
+    [[deprecated("Use single trajectory generation")]]
     std::vector<geometry_msgs::PoseArray> GapTrajGenerator::generateTrajectory(std::vector<potential_gap::Gap> gapset) {
         std::vector<geometry_msgs::PoseArray> traj_set(gapset.size());
         return traj_set;
@@ -122,7 +124,7 @@ namespace potential_gap{
 
         pose_arr.poses = shortened;
 
-        // Fix rotation inconsistency
+        // Fix rotation
         for (int idx = 1; idx < pose_arr.poses.size(); idx++)
         {
             new_pose = pose_arr.poses[idx];
