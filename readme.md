@@ -25,14 +25,20 @@ See NavBench [https://github.com/ivalab/NavBench](https://github.com/ivalab/NavB
 
 # BibTex Citation
 ```
-@misc{xu2021potential,
-      title={Potential Gap: A Gap-Informed Reactive Policy for Safe Hierarchical Navigation}, 
-      author={Ruoyang Xu and Shiyu Feng and Patricio A. Vela},
+@ARTICLE{9513583,
+      author={Xu, Ruoyang and Feng, Shiyu and Vela, Patricio},
+      journal={IEEE Robotics and Automation Letters},
+      title={Potential Gap: A Gap-Informed Reactive Policy for Safe Hierarchical Navigation},
       year={2021},
-      eprint={2103.11491},
-      archivePrefix={arXiv},
-      primaryClass={cs.RO}
+      volume={},
+      number={},
+      pages={1-1},
+      doi={10.1109/LRA.2021.3104623}
 }
+```
+
+```
+R. Xu, S. Feng and P. Vela, "Potential Gap: A Gap-Informed Reactive Policy for Safe Hierarchical Navigation," in IEEE Robotics and Automation Letters, doi: 10.1109/LRA.2021.3104623.
 ```
 
 # License
