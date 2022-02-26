@@ -237,13 +237,15 @@ namespace potential_gap
         std::vector<potential_gap::Gap> manip_set;
         manip_set = observed_gaps;
 
+        geometry_msgs::PoseStamped local_goal_sensor_frame;
+        tf2::doTransform(goalselector->rbtFrameLocalGoal(), local_goal_sensor_frame, rbt2cam);
         try {
             for (size_t i = 0; i < manip_set.size(); i++)
             {
-                gapManip->reduceGap(manip_set.at(i), goalselector->rbtFrameLocalGoal());
+                gapManip->reduceGap(manip_set.at(i), local_goal_sensor_frame);
                 gapManip->convertAxialGap(manip_set.at(i));
                 gapManip->radialExtendGap(manip_set.at(i));
-                gapManip->setGapWaypoint(manip_set.at(i), goalselector->rbtFrameLocalGoal());
+                gapManip->setGapWaypoint(manip_set.at(i), local_goal_sensor_frame);
             }
         } catch(...) {
             ROS_FATAL_STREAM("gapManipulate");

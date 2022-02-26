@@ -22,8 +22,12 @@ namespace potential_gap {
         // if agc. then the shorter side need to be further in
         auto lf = (pr - pl) / (pr - pl).norm() * cfg_->rbt.r_inscr * cfg_->traj.inf_ratio + pl;
         auto thetalf = car2pol(lf)(1);
+        if(gap.convex.convex_lidx < 0)
+            thetalf = -(M_PI - thetalf);
         auto lr = (pl - pr) / (pl - pr).norm() * cfg_->rbt.r_inscr * cfg_->traj.inf_ratio + pr;
         auto thetalr = car2pol(lr)(1);
+        if(gap.convex.convex_ridx > M_PI)
+            thetalr = M_PI + (thetalr + M_PI);
         
         auto left_ori = gap.convex.convex_lidx * msg.get()->angle_increment + msg.get()->angle_min;
         auto right_ori = gap.convex.convex_ridx * msg.get()->angle_increment + msg.get()->angle_min;
