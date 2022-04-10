@@ -346,11 +346,11 @@ namespace potential_gap {
         selected_gap.mode.convex = true;
 
         selected_gap.qB = qB;
-        ROS_DEBUG_STREAM("l: " << selected_gap._left_idx << " to " << selected_gap.convex_lidx
-         << ", r: " << selected_gap._right_idx << " to " << selected_gap.convex_ridx);
+        ROS_DEBUG_STREAM("l: " << selected_gap._left_idx << " to " << selected_gap.convex.convex_lidx
+         << ", r: " << selected_gap._right_idx << " to " << selected_gap.convex.convex_ridx);
         
-        ROS_DEBUG_STREAM("ldist: " << selected_gap._ldist << " to " << selected_gap.convex_ldist
-        << ", rdist: " << selected_gap._rdist << " to " << selected_gap.convex_rdist);
+        ROS_DEBUG_STREAM("ldist: " << selected_gap._ldist << " to " << selected_gap.convex.convex_ldist
+        << ", rdist: " << selected_gap._rdist << " to " << selected_gap.convex.convex_rdist);
 
         return;
     }
