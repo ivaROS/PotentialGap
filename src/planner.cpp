@@ -24,7 +24,8 @@ namespace potential_gap
             return true;
         }
 
-        pnh = unh;
+        // pnh = unh;
+        pnh = ros::NodeHandle(unh.getNamespace() + "/cc");
 
         // Config Setup
         cfg.loadRosParamFromNodeHandle(unh);
@@ -60,7 +61,7 @@ namespace potential_gap
         rbt_in_rbt.pose.orientation.w = 1;
         rbt_in_rbt.header.frame_id = cfg.robot_frame_id;
 
-        reconfigure_server_ = std::make_shared<ReconfigureServer>(unh);
+        reconfigure_server_ = std::make_shared<ReconfigureServer>(pnh);
         reconfigure_server_->setCallback(boost::bind(&Planner::configCB, this, _1, _2));
 
         log_vel_comp.set_capacity(cfg.planning.halt_size);
