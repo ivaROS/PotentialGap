@@ -22,7 +22,10 @@ PLUGINLIB_EXPORT_CLASS(potential_gap::PotentialGapPlanner, nav_core::BaseLocalPl
 
 namespace potential_gap 
 {
-    PotentialGapPlanner::PotentialGapPlanner(){}
+    PotentialGapPlanner::PotentialGapPlanner()
+    {
+        
+    }
 
     PotentialGapPlanner::~PotentialGapPlanner()
     {
@@ -64,6 +67,12 @@ namespace potential_gap
             ros::NodeHandle pnh("~/" + planner_name);
             planner.initialize(pnh);
             ROS_WARN_STREAM("computerVelocity called before initializing planner");
+        }
+
+        if(planner.ccEnabled() && !planner.getCCWrapper()->isReady())
+        {
+            ROS_ERROR("CC NOT READY");
+            return false;
         }
 
         auto final_traj = planner.getPlanTrajectory();

@@ -41,13 +41,62 @@
 #include <boost/thread/mutex.hpp>
 #include <boost/circular_buffer.hpp>
 
+#include <turtlebot_trajectory_testing/turtlebot_trajectory_tester.h>
+#include <pips_trajectory_testing/pips_trajectory_tester.h>
+#include <pips_trajectory_msgs/trajectory_points.h>
+#include <pips_trajectory_testing/pips_cc_wrapper.h>
+#include <pips_trajectory_testing/depth_image_cc_wrapper.h>
+#include <pips_egocylindrical/egocylindrical_image_cc_wrapper.h>
+
+#include <potential_gap/CollisionCheckerConfig.h>
+
 #ifndef PLANNER_H
 #define PLANNER_H
 
 namespace potential_gap
 {
+    struct CollisionResults
+    {
+        int collision_idx_ = -1;
+        pips_trajectory_msgs::trajectory_points local_traj_;
+        
+        CollisionResults()
+        {
+            collision_idx_ = -1;
+        }
+
+        CollisionResults(int collision_idx, pips_trajectory_msgs::trajectory_points local_traj)
+        {
+            collision_idx_ = collision_idx;
+            local_traj_ = local_traj;
+        }
+    };
+
     class Planner
     {
+    public:
+        typedef TurtlebotGenAndTest::trajectory_ptr trajectory_ptr;
+        typedef TurtlebotGenAndTest::traj_func_type traj_func_type;
+        typedef TurtlebotGenAndTest::traj_func_ptr traj_func_ptr;
+        typedef TurtlebotGenAndTest::trajectory_points trajectory_points;
+        typedef TurtlebotGenAndTest::TrajBridge TrajBridge;
+        typedef std::shared_ptr<TurtlebotGenAndTest> GenAndTest_ptr;
+
+        std::shared_ptr<pips_trajectory_testing::PipsCCWrapper> cc_wrapper_;
+        GenAndTest_ptr traj_tester_;
+
+        bool collision_checker_enable_ = false;
+        int cc_type_ = -1;
+
+        using Mutex = boost::mutex;
+        using Lock = Mutex::scoped_lock;
+        Mutex connect_mutex_;
+
+        typedef dynamic_reconfigure::Server<potential_gap::CollisionCheckerConfig> ReconfigureServer;
+        std::shared_ptr<ReconfigureServer> reconfigure_server_;
+
+        void configCB(potential_gap::CollisionCheckerConfig &config, uint32_t level);
+
     private:
         geometry_msgs::TransformStamped map2rbt;        // Transform
         geometry_msgs::TransformStamped rbt2map;
@@ -62,11 +111,11 @@ namespace potential_gap
         geometry_msgs::PoseStamped rbt_in_rbt;
         geometry_msgs::PoseStamped rbt_in_cam;
         
-        tf2_ros::Buffer tfBuffer;
-        tf2_ros::TransformListener *tfListener;
+        std::shared_ptr<tf2_ros::Buffer> tfBuffer;
+        std::shared_ptr<tf2_ros::TransformListener> tfListener;
         tf2_ros::TransformBroadcaster goal_br;
 
-        ros::NodeHandle nh;
+        ros::NodeHandle nh, pnh;
         ros::Publisher local_traj_pub;
         ros::Publisher trajectory_pub;
         ros::Publisher gap_vis_pub;
@@ -238,6 +287,8 @@ namespace potential_gap
          */
         geometry_msgs::PoseArray compareToOldTraj(geometry_msgs::PoseArray);
 
+        CollisionResults checkCollision(const geometry_msgs::PoseArray path);
+
         /**
          * Setter and Getter of Current Trajectory, this is performed in the compareToOldTraj function
          */
@@ -269,7 +320,21 @@ namespace potential_gap
          * @return False if robot has been stuck for the past cfg.planning.halt_size iterations
          */
         bool recordAndCheckVel(geometry_msgs::Twist cmd_vel);
-    
+        
+        void setCCWrapper(const std::shared_ptr<pips_trajectory_testing::PipsCCWrapper>& cc_wrapper)
+        {
+            cc_wrapper_ = cc_wrapper;
+        }
+
+        std::shared_ptr<pips_trajectory_testing::PipsCCWrapper> getCCWrapper()
+        {
+            return cc_wrapper_;
+        }
+
+        bool ccEnabled()
+        {
+            return collision_checker_enable_;
+        }
     };
 }
 

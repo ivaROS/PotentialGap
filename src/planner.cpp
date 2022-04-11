@@ -24,6 +24,8 @@ namespace potential_gap
             return true;
         }
 
+        pnh = unh;
+
         // Config Setup
         cfg.loadRosParamFromNodeHandle(unh);
 
@@ -37,7 +39,8 @@ namespace potential_gap
         ni_traj_pub_other = nh.advertise<visualization_msgs::MarkerArray>("other_ni_traj", 5);
 
         // TF Lookup setup
-        tfListener = new tf2_ros::TransformListener(tfBuffer);
+        tfBuffer = std::make_shared<tf2_ros::Buffer>();
+        tfListener = std::make_shared<tf2_ros::TransformListener>(*tfBuffer);
         _initialized = true;
 
         finder = new potential_gap::GapUtils(cfg);
@@ -57,8 +60,53 @@ namespace potential_gap
         rbt_in_rbt.pose.orientation.w = 1;
         rbt_in_rbt.header.frame_id = cfg.robot_frame_id;
 
+        reconfigure_server_ = std::make_shared<ReconfigureServer>(unh);
+        reconfigure_server_->setCallback(boost::bind(&Planner::configCB, this, _1, _2));
+
         log_vel_comp.set_capacity(cfg.planning.halt_size);
         return true;
+    }
+
+    void Planner::configCB(potential_gap::CollisionCheckerConfig &config, uint32_t level)
+    {
+        ROS_INFO_STREAM("CC Reconfigure Request: "); // TODO: print out the cc type and other parameter values
+
+        Lock lock(connect_mutex_);
+
+        collision_checker_enable_ = config.cc_enable;
+        if(!collision_checker_enable_)
+        {
+            ROS_WARN_STREAM("Collision checking is disabled.");
+            return;
+        }
+
+        if(config.cc_type != cc_type_)
+        {
+            if(config.cc_type == potential_gap::CollisionChecker_depth)
+            {
+                ROS_INFO_STREAM("New cc type = depth");
+                cc_wrapper_ = std::make_shared<pips_trajectory_testing::DepthImageCCWrapper>(nh, pnh, tfBuffer);
+            }
+            else if(config.cc_type == potential_gap::CollisionChecker_depth_ego)
+            {
+                ROS_INFO_STREAM("New cc type = depth ego");
+                cc_wrapper_ = std::make_shared<pips_egocylindrical::EgocylindricalRangeImageCCWrapper>(nh, pnh, tfBuffer);
+            }
+            else if(config.cc_type == potential_gap::CollisionChecker_egocircle)
+            {
+                ROS_WARN_STREAM("New cc type = egocircle is not supported yet");
+            }
+
+            traj_tester_ = std::make_shared<TurtlebotGenAndTest>(nh, pnh);
+            
+            cc_wrapper_->init();
+            cc_wrapper_->autoUpdate();
+
+            traj_tester_->init();
+            traj_tester_->setCollisionChecker(cc_wrapper_->getCC());
+            
+            cc_type_ = config.cc_type;
+        }
     }
 
     bool Planner::initialized()
@@ -142,7 +190,7 @@ namespace potential_gap
         // Transform the msg to odom frame
         if(msg->header.frame_id != cfg.odom_frame_id)
         {
-            geometry_msgs::TransformStamped robot_pose_odom_trans = tfBuffer.lookupTransform(cfg.odom_frame_id, msg->header.frame_id, ros::Time(0));
+            geometry_msgs::TransformStamped robot_pose_odom_trans = tfBuffer->lookupTransform(cfg.odom_frame_id, msg->header.frame_id, ros::Time(0));
 
             geometry_msgs::PoseStamped in_pose, out_pose;
             in_pose.header = msg->header;
@@ -208,13 +256,13 @@ namespace potential_gap
     void Planner::updateTF()
     {
         try {
-            map2rbt  = tfBuffer.lookupTransform(cfg.robot_frame_id, cfg.map_frame_id, ros::Time(0));
-            rbt2map  = tfBuffer.lookupTransform(cfg.map_frame_id, cfg.robot_frame_id, ros::Time(0));
-            odom2rbt = tfBuffer.lookupTransform(cfg.robot_frame_id, cfg.odom_frame_id, ros::Time(0));
-            rbt2odom = tfBuffer.lookupTransform(cfg.odom_frame_id, cfg.robot_frame_id, ros::Time(0));
-            cam2odom = tfBuffer.lookupTransform(cfg.odom_frame_id, cfg.sensor_frame_id, ros::Time(0));
-            map2odom = tfBuffer.lookupTransform(cfg.odom_frame_id, cfg.map_frame_id, ros::Time(0));
-            rbt2cam = tfBuffer.lookupTransform(cfg.sensor_frame_id, cfg.robot_frame_id, ros::Time(0));
+            map2rbt  = tfBuffer->lookupTransform(cfg.robot_frame_id, cfg.map_frame_id, ros::Time(0));
+            rbt2map  = tfBuffer->lookupTransform(cfg.map_frame_id, cfg.robot_frame_id, ros::Time(0));
+            odom2rbt = tfBuffer->lookupTransform(cfg.robot_frame_id, cfg.odom_frame_id, ros::Time(0));
+            rbt2odom = tfBuffer->lookupTransform(cfg.odom_frame_id, cfg.robot_frame_id, ros::Time(0));
+            cam2odom = tfBuffer->lookupTransform(cfg.odom_frame_id, cfg.sensor_frame_id, ros::Time(0));
+            map2odom = tfBuffer->lookupTransform(cfg.odom_frame_id, cfg.map_frame_id, ros::Time(0));
+            rbt2cam = tfBuffer->lookupTransform(cfg.sensor_frame_id, cfg.robot_frame_id, ros::Time(0));
 
             tf2::doTransform(rbt_in_rbt, rbt_in_cam, rbt2cam);
         } catch (tf2::TransformException &ex) {
@@ -390,6 +438,44 @@ namespace potential_gap
         return curr_traj;
     }
 
+    CollisionResults Planner::checkCollision(const geometry_msgs::PoseArray path)
+    {
+        // Convert the trajectory from odom to base frame
+        auto path_rbt = gapTrajSyn->transformBackTrajectory(path, odom2rbt);
+        geometry_msgs::Pose curr_pose;
+        curr_pose.orientation.w = 1;
+        auto orig_ref = trajController->trajGen(path_rbt);
+        orig_ref.header.frame_id = cfg.robot_frame_id;
+        ctrl_idx = trajController->targetPoseIdx(curr_pose, orig_ref);
+
+        pips_trajectory_msgs::trajectory_points local_traj;
+        local_traj.header.frame_id = cfg.robot_frame_id;
+        for(int i = ctrl_idx; i < orig_ref.poses.size(); i++)
+        {
+            pips_trajectory_msgs::trajectory_point pt;
+            pt.x = orig_ref.poses[i].position.x;
+            pt.y = orig_ref.poses[i].position.y;
+
+            // ROS_INFO_STREAM(pt.x << " " << pt.y);
+
+            tf2::Quaternion quat_tf;
+            tf2::convert(orig_ref.poses[i].orientation, quat_tf);
+            tf2::Matrix3x3 m(quat_tf);
+            double roll, pitch, yaw;
+            m.getRPY(roll, pitch, yaw);
+            pt.theta = yaw;
+
+            local_traj.points.push_back(pt);
+        }
+        
+
+        int collision_ind = traj_tester_->evaluateTrajectory(local_traj);
+
+        CollisionResults cc_results(collision_ind, local_traj);
+
+        return cc_results;
+    }
+
     int Planner::egoTrajPosition(geometry_msgs::PoseArray curr) {
         std::vector<double> pose_diff(curr.poses.size());
         // ROS_INFO_STREAM("Ref_pose length: " << ref_pose.poses.size());
@@ -489,6 +575,25 @@ namespace potential_gap
         auto picked_traj = pickTraj(traj_set, score_set);
 
         auto final_traj = compareToOldTraj(picked_traj);
+
+        CollisionResults cc_results;
+        if(collision_checker_enable_)
+        {
+            ros::WallTime start = ros::WallTime::now();
+
+            cc_results = checkCollision(final_traj);
+
+            ROS_INFO_STREAM("Current trajectory collision checked in " <<  (ros::WallTime::now() - start).toSec() * 1e3 << "ms");
+        
+            int cc_ite_min = 10;
+            double cc_itc_ratio = 0.2;
+
+            if(cc_results.collision_idx_ >= 0 && double(cc_results.collision_idx_) / cc_results.local_traj_.points.size() <= cc_itc_ratio)
+            {
+                ROS_WARN_STREAM("Current trajectory collides! " << cc_results.collision_idx_ << " " << cc_results.local_traj_.points.size());
+                setCurrentTraj(geometry_msgs::PoseArray());
+            }
+        }
         
         return final_traj;
     }

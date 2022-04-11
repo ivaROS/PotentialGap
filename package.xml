@@ -61,6 +61,10 @@
   <exec_depend>pips_trajectory_msgs</exec_depend>
   <!-- <exec_depend>turtlebot_trajectory_generator</exec_depend> -->
 
+  <depend>pips</depend>
+  <depend>pips_trajectory_testing</depend>
+  <depend>turtlebot_trajectory_testing</depend>
+  <depend>pips_egocylindrical</depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>

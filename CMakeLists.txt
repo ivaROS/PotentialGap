@@ -26,12 +26,17 @@ find_package(catkin REQUIRED COMPONENTS
   pips_trajectory_msgs
   dynamic_reconfigure
   message_generation
+  pips
+  pips_trajectory_testing
+  turtlebot_trajectory_testing
+  pips_egocylindrical
 )
 find_package(Boost REQUIRED COMPONENTS system)
 find_package(Eigen3 REQUIRED)
 
 generate_dynamic_reconfigure_options(
   cfg/pg.cfg
+  cfg/CollisionChecker.cfg
 )
 
 ## Specify additional locations of header files
