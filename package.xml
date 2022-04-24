@@ -65,6 +65,7 @@
   <depend>pips_trajectory_testing</depend>
   <depend>turtlebot_trajectory_testing</depend>
   <depend>pips_egocylindrical</depend>
+  <depend>pips_egocircle</depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>

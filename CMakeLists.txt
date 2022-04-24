@@ -30,6 +30,7 @@ find_package(catkin REQUIRED COMPONENTS
   pips_trajectory_testing
   turtlebot_trajectory_testing
   pips_egocylindrical
+  pips_egocircle
 )
 find_package(Boost REQUIRED COMPONENTS system)
 find_package(Eigen3 REQUIRED)
@@ -63,7 +64,7 @@ catkin_package(
 #  LIBRARIES potential_gap
   INCLUDE_DIRS ${EIGEN3_INCLUDE_DIRS}
   DEPENDS OpenMP 
-  CATKIN_DEPENDS base_local_planner dynamic_reconfigure egocircle geometry_msgs nav_msgs roscpp rospy std_msgs sensor_msgs pips_trajectory_msgs message_runtime
+  CATKIN_DEPENDS base_local_planner dynamic_reconfigure egocircle geometry_msgs nav_msgs roscpp rospy std_msgs sensor_msgs pips_trajectory_msgs message_runtime pips_egocircle
 )
 
 

@@ -86,16 +86,17 @@ namespace potential_gap
             if(config.cc_type == potential_gap::CollisionChecker_depth)
             {
                 ROS_INFO_STREAM("New cc type = depth");
-                cc_wrapper_ = std::make_shared<pips_trajectory_testing::DepthImageCCWrapper>(nh, pnh, tfBuffer);
+                cc_wrapper_ = std::make_shared<pips_trajectory_testing::DepthImageCCWrapper>(nh, pnh, tf2_utils::TransformManager(tfBuffer, tfListener));
             }
             else if(config.cc_type == potential_gap::CollisionChecker_depth_ego)
             {
                 ROS_INFO_STREAM("New cc type = depth ego");
-                cc_wrapper_ = std::make_shared<pips_egocylindrical::EgocylindricalRangeImageCCWrapper>(nh, pnh, tfBuffer);
+                cc_wrapper_ = std::make_shared<pips_egocylindrical::EgocylindricalRangeImageCCWrapper>(nh, pnh, tf2_utils::TransformManager(tfBuffer, tfListener));
             }
             else if(config.cc_type == potential_gap::CollisionChecker_egocircle)
             {
-                ROS_WARN_STREAM("New cc type = egocircle is not supported yet");
+                ROS_INFO_STREAM("New cc type = egocircle");
+                cc_wrapper_ = std::make_shared<pips_egocircle::EgoCircleCCWrapper>(nh, pnh, tf2_utils::TransformManager(tfBuffer, tfListener));
             }
 
             traj_tester_ = std::make_shared<TurtlebotGenAndTest>(nh, pnh);

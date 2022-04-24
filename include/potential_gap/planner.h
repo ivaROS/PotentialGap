@@ -33,6 +33,8 @@
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
+#include <tf2_utils/transform_manager.h>
+
 #include <omp.h>
 
 #include <dynamic_reconfigure/server.h>
@@ -47,6 +49,7 @@
 #include <pips_trajectory_testing/pips_cc_wrapper.h>
 #include <pips_trajectory_testing/depth_image_cc_wrapper.h>
 #include <pips_egocylindrical/egocylindrical_image_cc_wrapper.h>
+#include <pips_egocircle/egocircle_cc_wrapper.h>
 
 #include <potential_gap/CollisionCheckerConfig.h>
 
