@@ -7,6 +7,7 @@
 #include <potential_gap/potentialgap_config.h>
 #include <vector>
 #include <map>
+#include <numeric>
 #include <visualization_msgs/MarkerArray.h>
 #include <visualization_msgs/Marker.h>
 #include <Eigen/Core>

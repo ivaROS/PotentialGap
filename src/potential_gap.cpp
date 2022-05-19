@@ -42,7 +42,7 @@ namespace potential_gap
         return planner.setGoal(plan);
     }
 
-    void PotentialGapPlanner::initialize(std::string name, tf::TransformListener* tf, costmap_2d::Costmap2DROS* costmap_ros)
+    void PotentialGapPlanner::initialize(std::string name, tf2_ros::Buffer* tf, costmap_2d::Costmap2DROS* costmap_ros)
     {
         planner_name = name;
         ros::NodeHandle pnh("~/" + planner_name);
