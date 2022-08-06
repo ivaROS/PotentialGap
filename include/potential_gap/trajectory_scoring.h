@@ -60,7 +60,7 @@ namespace potential_gap{
 
             int search_idx = -1;
 
-            double r_inscr, rmax, cobs, w;
+            double r_inscr, rmax, cobs, w, terminal_weight;
     };
 }
 

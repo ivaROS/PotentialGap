@@ -8,6 +8,7 @@ namespace potential_gap {
         rmax = cfg_->traj.rmax;
         cobs = cfg_->traj.cobs;
         w = cfg_->traj.w;
+        terminal_weight = cfg_->traj.terminal_weight;
     }
 
     void TrajectoryArbiter::updateEgoCircle(boost::shared_ptr<sensor_msgs::LaserScan const> msg_) {
@@ -78,7 +79,7 @@ namespace potential_gap {
 
         if (cost_val.size() > 0) // && ! cost_val.at(0) == -std::numeric_limits<double>::infinity())
         {
-            auto terminal_cost = 10 * terminalGoalCost(*std::prev(traj.poses.end()));
+            auto terminal_cost = terminal_weight * terminalGoalCost(*std::prev(traj.poses.end()));
             if (terminal_cost < 1 && total_val > -10) return std::vector<double>(traj.poses.size(), 100);
             // Should be safe
             cost_val.at(0) -= terminal_cost;

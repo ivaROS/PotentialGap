@@ -39,6 +39,7 @@ namespace potential_gap {
 
         nh.param("vx_absmax",control.vx_absmax, control.vx_absmax);
         nh.param("vy_absmax",control.vy_absmax, control.vy_absmax);
+        nh.param("ang_absmax",control.ang_absmax, control.ang_absmax);
 
         // Projection Params
         nh.param("k_po", projection.k_po, projection.k_po);
@@ -114,6 +115,7 @@ namespace potential_gap {
         control.ctrl_ahead_pose = cfg.ctrl_ahead_pose;
         control.vx_absmax = cfg.vx_absmax;
         control.vy_absmax = cfg.vy_absmax;
+        control.ang_absmax = cfg.ang_absmax;
 
         // Projection Params
         projection.k_po = cfg.k_po;
