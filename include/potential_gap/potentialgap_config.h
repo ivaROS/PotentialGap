@@ -47,6 +47,7 @@ namespace potential_gap {
                 int ctrl_ahead_pose;
                 double vx_absmax;
                 double vy_absmax;
+                double ang_absmax;
             } control;
             
             struct ProjectionParam {
@@ -137,6 +138,7 @@ namespace potential_gap {
             control.ctrl_ahead_pose = 2;
             control.vx_absmax = 0.5;
             control.vy_absmax = 0.5;
+            control.ang_absmax = 0.2;
 
             projection.k_po = 0.8;
             projection.k_po_turn = 1;

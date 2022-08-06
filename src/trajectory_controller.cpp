@@ -184,7 +184,7 @@ namespace potential_gap{
 
         float u_add_x = 0;
         float u_add_y = 0;
-        float v_ang_fb = 0;
+        double v_ang_fb = 0;
         double v_lin_x_fb = 0;
         double v_lin_y_fb = 0;
 
@@ -414,7 +414,7 @@ namespace potential_gap{
 
         cmd_vel.linear.x = std::max(-cfg_->control.vx_absmax, std::min(cfg_->control.vx_absmax, v_lin_x_fb));
         cmd_vel.linear.y = std::max(-cfg_->control.vy_absmax, std::min(cfg_->control.vy_absmax, v_lin_y_fb));
-        cmd_vel.angular.z = v_ang_fb;
+        cmd_vel.angular.z = std::max(-cfg_->control.ang_absmax, std::min(cfg_->control.ang_absmax, v_ang_fb));
         return cmd_vel;
     }
 
