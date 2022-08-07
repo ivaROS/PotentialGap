@@ -14,6 +14,7 @@ namespace potential_gap {
         global_plan.clear();
         global_plan = plan;
         // transform plan to robot frame such as base_link
+        return true;
     }
 
     void GoalSelector::updateEgoCircle(boost::shared_ptr<sensor_msgs::LaserScan const> msg) {
