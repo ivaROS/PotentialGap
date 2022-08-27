@@ -20,11 +20,16 @@ namespace potential_gap {
         Eigen::Vector2f pr(x2, y2);
         
         // if agc. then the shorter side need to be further in
-        auto lf = (pr - pl) / (pr - pl).norm() * cfg_->rbt.r_inscr * cfg_->traj.inf_ratio + pl;
+        
+        // Get the equivalent passing length
+        Eigen::Vector2d orient_vec(1, 0);
+        Eigen::Vector2d m_pt_vec = (pl.cast<double>() + pr.cast<double>()) / 2;
+        double epl = robot_geo_proc_.getDecayEquivalentPL(orient_vec, m_pt_vec, m_pt_vec.norm());
+        auto lf = (pr - pl) / (pr - pl).norm() * (epl / 2) * cfg_->traj.inf_ratio + pl;
         auto thetalf = car2pol(lf)(1);
         if(gap.convex.convex_lidx < 0)
             thetalf = -(M_PI - thetalf);
-        auto lr = (pl - pr) / (pl - pr).norm() * cfg_->rbt.r_inscr * cfg_->traj.inf_ratio + pr;
+        auto lr = (pl - pr) / (pl - pr).norm() * (epl / 2) * cfg_->traj.inf_ratio + pr;
         auto thetalr = car2pol(lr)(1);
         if(gap.convex.convex_ridx > M_PI)
             thetalr = M_PI + (thetalr + M_PI);
@@ -40,7 +45,7 @@ namespace potential_gap {
         if (gap_size_check && !cfg_->planning.planning_inflated) {
             // if smaller than M_PI/3
             dist = sqrt(pow(x2 - x1, 2) + pow(y2 - y1, 2));
-            small_gap = dist < 4 * cfg_->rbt.r_inscr;
+            small_gap = dist < 2 * epl;
         }
 
         if (thetalr < thetalf || small_gap) {
@@ -61,15 +66,16 @@ namespace potential_gap {
         Eigen::Matrix2f r_negpi2;
             r_negpi2 << 0,1,-1,0;
         auto offset = r_negpi2 * (pr - pl);
-        auto goal_pt = offset * cfg_->rbt.r_inscr * cfg_->traj.inf_ratio + anchor;
+        // auto goal_pt = offset / offset.norm() * (epl / 2) * cfg_->traj.inf_ratio + anchor;
+        auto goal_pt = offset * (epl / 2) * cfg_->traj.inf_ratio + anchor;
 
-        float r1 = gap.convex.convex_ldist;
-        float r2 = gap.convex.convex_rdist;
-        double r_close = (double) std::min(r1, r2);
-        double goal_dist = sqrt(
-            pow(localgoal.pose.position.y, 2) + 
-            pow(localgoal.pose.position.x, 2)
-        );
+        // float r1 = gap.convex.convex_ldist;
+        // float r2 = gap.convex.convex_rdist;
+        // double r_close = (double) std::min(r1, r2);
+        // double goal_dist = sqrt(
+        //     pow(localgoal.pose.position.y, 2) + 
+        //     pow(localgoal.pose.position.x, 2)
+        // );
 
         if (checkGoalVisibility(localgoal)) {
             gap.goal.x = localgoal.pose.position.x;
@@ -94,12 +100,16 @@ namespace potential_gap {
         auto min_val = *std::min_element(scan.ranges.begin(), scan.ranges.end());
 
         // If sufficiently close to robot
-        if (dist2goal < 2 * cfg_->rbt.r_inscr) {
+        Eigen::Vector2d orient_vec(1, 0);
+        Eigen::Vector2d goal_vec(localgoal.pose.position.x, localgoal.pose.position.y);
+        double er = robot_geo_proc_.getEquivalentR(orient_vec, goal_vec);
+        if (dist2goal < 2 * er) {
             return true;
         }
 
         // If within closest configuration space
-        if (dist2goal < min_val - cfg_->traj.inf_ratio * cfg_->rbt.r_inscr) {
+        double er_max = robot_geo_proc_.getRobotMaxRadius();
+        if (dist2goal < min_val - cfg_->traj.inf_ratio * er_max) {
             return true;
         }
 
@@ -107,7 +117,7 @@ namespace potential_gap {
         double goal_angle = std::atan2(localgoal.pose.position.y, localgoal.pose.position.x);
         int incident_angle = (int) round((goal_angle - scan.angle_min) / scan.angle_increment);
 
-        double half_angle = std::asin(cfg_->rbt.r_inscr / dist2goal);
+        // double half_angle = std::asin(cfg_->rbt.r_inscr / dist2goal);
         // int index = std::ceil(half_angle / scan.angle_increment) * 1.5;
         int index = (int)(scan.ranges.size()) / 8;
         int lower_bound = std::max(incident_angle - index, 0);
@@ -134,7 +144,7 @@ namespace potential_gap {
         double goal_orientation = std::atan2(localgoal.pose.position.y, localgoal.pose.position.x);
         int goal_idx = goal_orientation / (M_PI / (num_of_scan / 2)) + (num_of_scan / 2);
 
-        int acceptable_dist = gap_size / 2;
+        int acceptable_dist = int(round(gap_size / 2));
 
         int new_l, new_r;
         if (goal_idx + acceptable_dist > ridx){

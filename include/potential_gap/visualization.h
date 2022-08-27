@@ -52,7 +52,7 @@ namespace potential_gap
             using Visualizer::Visualizer;
         public: 
             TrajectoryVisualizer(ros::NodeHandle& nh, const potential_gap::PotentialGapConfig& cfg);
-            void globalPlanRbtFrame(const std::vector<geometry_msgs::PoseStamped> & );
+            void rawGlobalPlan(const std::vector<geometry_msgs::PoseStamped> & );
             void trajScore(geometry_msgs::PoseArray, std::vector<double>);
             void pubAllTraj(std::vector<geometry_msgs::PoseArray> prr);
             void pubAllScore(std::vector<geometry_msgs::PoseArray>, std::vector<std::vector<double>>);

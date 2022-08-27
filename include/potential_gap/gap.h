@@ -232,6 +232,18 @@ namespace potential_gap
             float get_dist_side() {
                 return sqrt(pow(_ldist, 2) + pow(_rdist, 2) - 2 * _ldist * _rdist * (cos(float(_right_idx - _left_idx) / float(half_scan) * M_PI)));
             }
+
+            Eigen::Vector2d get_middle_pt_vec()
+            {
+                float lx, ly;
+                getLCartesian(lx, ly);
+                Eigen::Vector2d l_vec(lx, ly);
+                float rx, ry;
+                getRCartesian(rx, ry);
+                Eigen::Vector2d r_vec(rx, ry);
+                Eigen::Vector2d m_vec = (l_vec + r_vec) / 2;
+                return m_vec;
+            }
             
             bool goal_within = false;
             bool goal_dir_within = false;

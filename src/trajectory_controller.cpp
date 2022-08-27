@@ -126,7 +126,7 @@ namespace potential_gap{
 
     geometry_msgs::Twist TrajectoryController::controlLaw(
         geometry_msgs::Pose current, nav_msgs::Odometry desired,
-        sensor_msgs::LaserScan inflated_egocircle, geometry_msgs::PoseStamped rbt_in_cam_lc
+        sensor_msgs::LaserScan inflated_egocircle, geometry_msgs::PoseStamped init_pose
     ) {
         // Setup Vars
         boost::mutex::scoped_lock lock(egocircle_l);
@@ -205,7 +205,7 @@ namespace potential_gap{
         float min_diff_x = 0;
         float min_diff_y = 0;
 
-        // ROS_INFO_STREAM(rbt_in_cam_lc.pose);
+        // ROS_INFO_STREAM(init_pose.pose);
         
         Eigen::Vector3d comp;
         double prod_mul;
@@ -223,7 +223,7 @@ namespace potential_gap{
             for (int i = 0; i < min_dist_arr.size(); i++) {
                 float angle = i * inflated_egocircle.angle_increment - M_PI;
                 float dist = inflated_egocircle.ranges.at(i);
-                min_dist_arr.at(i) = dist2Pose(angle, dist, rbt_in_cam_lc.pose);
+                min_dist_arr.at(i) = dist2Pose(angle, dist, init_pose.pose);
             }
             int min_idx = std::min_element( min_dist_arr.begin(), min_dist_arr.end() ) - min_dist_arr.begin();
 
@@ -232,10 +232,10 @@ namespace potential_gap{
             // ROS_INFO_STREAM("Local Line End");
             if (vec.size() > 1) {
                 // Visualization and Recenter
-                vec.at(0).x -= rbt_in_cam_lc.pose.position.x;
-                vec.at(0).y -= rbt_in_cam_lc.pose.position.y;
-                vec.at(1).x -= rbt_in_cam_lc.pose.position.x;
-                vec.at(1).y -= rbt_in_cam_lc.pose.position.y;
+                vec.at(0).x -= init_pose.pose.position.x;
+                vec.at(0).y -= init_pose.pose.position.y;
+                vec.at(1).x -= init_pose.pose.position.x;
+                vec.at(1).y -= init_pose.pose.position.y;
 
                 std::vector<std_msgs::ColorRGBA> color;
                 std_msgs::ColorRGBA std_color;
@@ -268,8 +268,8 @@ namespace potential_gap{
             // min_dist -= cfg_->rbt.r_inscr / 2;
 
             min_dist_ang = (float)(min_idx) * inflated_egocircle.angle_increment + inflated_egocircle.angle_min;
-            float min_x = min_dist * cos(min_dist_ang) - rbt_in_cam_lc.pose.position.x;
-            float min_y = min_dist * sin(min_dist_ang) - rbt_in_cam_lc.pose.position.y;
+            float min_x = min_dist * cos(min_dist_ang) - init_pose.pose.position.x;
+            float min_y = min_dist * sin(min_dist_ang) - init_pose.pose.position.y;
             min_dist = sqrt(pow(min_x, 2) + pow(min_y, 2));
 
             // ROS_INFO_STREAM("min_dist: " << min_dist);

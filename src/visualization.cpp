@@ -345,7 +345,7 @@ namespace potential_gap{
         all_traj_viz = nh.advertise<visualization_msgs::MarkerArray>("all_traj_vis", 1000);
     }
 
-    void TrajectoryVisualizer::globalPlanRbtFrame(const std::vector<geometry_msgs::PoseStamped> & plan) {
+    void TrajectoryVisualizer::rawGlobalPlan(const std::vector<geometry_msgs::PoseStamped> & plan) {
         if (!cfg_->gap_viz.debug_viz) return;
         if (plan.size() < 1) {
             ROS_WARN_STREAM("Goal Selector Returned Trajectory Size " << plan.size() << " < 1");

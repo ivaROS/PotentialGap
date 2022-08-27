@@ -5,8 +5,9 @@ namespace potential_gap {
 
     GapUtils::~GapUtils() {}
 
-    GapUtils::GapUtils(const PotentialGapConfig& cfg) {
+    GapUtils::GapUtils(const PotentialGapConfig& cfg, RobotGeoProc& robot_geo_proc) {
         cfg_ = & cfg;
+        robot_geo_proc_ = robot_geo_proc;
     }
 
     void GapUtils::hybridScanGap(boost::shared_ptr<sensor_msgs::LaserScan const> sharedPtr_laser,
@@ -45,7 +46,11 @@ namespace potential_gap {
                     detected_gap.setMinSafeDist(min_dist);
                     // Inscribed radius gets enforced here, or unless using inflated egocircle,
                     // then no need for range diff
-                    if (detected_gap.get_dist_side() > 2 * cfg_->rbt.r_inscr || cfg_->planning.planning_inflated) observed_gaps.push_back(detected_gap);
+                    // Find equivalent passing length
+                    Eigen::Vector2d orient_vec(1, 0);
+                    Eigen::Vector2d m_pt_vec = detected_gap.get_middle_pt_vec();
+                    double epl = robot_geo_proc_.getDecayEquivalentPL(orient_vec, m_pt_vec, m_pt_vec.norm());
+                    if (detected_gap.get_dist_side() > epl || cfg_->planning.planning_inflated) observed_gaps.push_back(detected_gap);
                 }
                 
             }
@@ -62,7 +67,11 @@ namespace potential_gap {
                     detected_gap.setMinSafeDist(min_dist);
                     // Inscribed radius gets enforced here, or unless using inflated egocircle,
                     // then no need for range diff
-                    if (detected_gap.get_dist_side() > 2 * cfg_->rbt.r_inscr || cfg_->planning.planning_inflated) observed_gaps.push_back(detected_gap);
+                    // Find equivalent passing length
+                    Eigen::Vector2d orient_vec(1, 0);
+                    Eigen::Vector2d m_pt_vec = detected_gap.get_middle_pt_vec();
+                    double epl = robot_geo_proc_.getDecayEquivalentPL(orient_vec, m_pt_vec, m_pt_vec.norm());
+                    if (detected_gap.get_dist_side() > epl || cfg_->planning.planning_inflated) observed_gaps.push_back(detected_gap);
                 }
                 else // previously not marked a gap, not marking the gap
                 {
@@ -80,7 +89,10 @@ namespace potential_gap {
             potential_gap::Gap detected_gap(frame, gap_lidx, gap_ldist, half_scan);
             detected_gap.addRightInformation(int(stored_scan_msgs.ranges.size() - 1), *(stored_scan_msgs.ranges.end() - 1));
             detected_gap.setMinSafeDist(min_dist);
-            if (detected_gap._right_idx - detected_gap._left_idx > 500 || detected_gap.get_dist_side() > 2 * cfg_->rbt.r_inscr) observed_gaps.push_back(detected_gap);
+            Eigen::Vector2d orient_vec(1, 0);
+            Eigen::Vector2d m_pt_vec = detected_gap.get_middle_pt_vec();
+            double epl = robot_geo_proc_.getDecayEquivalentPL(orient_vec, m_pt_vec, m_pt_vec.norm());
+            if (detected_gap._right_idx - detected_gap._left_idx > 500 || detected_gap.get_dist_side() > epl) observed_gaps.push_back(detected_gap);
         }
         
         // Bridge the last gap around
@@ -152,7 +164,10 @@ namespace potential_gap {
                                 int start_idx = std::min(second_gap[j].RIdx(), observed_gaps[i].LIdx());
                                 int end_idx = std::max(second_gap[j].RIdx(), observed_gaps[i].LIdx());
                                 auto farside_iter = std::min_element(stored_scan_msgs.ranges.begin() + start_idx, stored_scan_msgs.ranges.begin() + end_idx);
-                                bool second_test = curr_rdist <= (*farside_iter - coefs * cfg_->rbt.r_inscr) && second_gap[j].LDist() <= (*farside_iter - coefs * cfg_->rbt.r_inscr);
+                                int farside_idx = farside_iter - stored_scan_msgs.ranges.begin();
+                                // TODO: what number to use? Currently, use the max radius. The merging will not happen frequently.
+                                double max_r_er = robot_geo_proc_.getRobotMaxRadius();
+                                bool second_test = curr_rdist <= (*farside_iter - coefs * max_r_er) && second_gap[j].LDist() <= (*farside_iter - coefs * max_r_er);
                                 bool dist_diff = second_gap[j].isLeftType() || !second_gap[j].isAxial();
                                 bool idx_diff = observed_gaps[i].RIdx() - second_gap[j].LIdx() < cfg_->gap_manip.max_idx_diff;
                                 if (second_test && dist_diff && idx_diff) {

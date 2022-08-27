@@ -8,7 +8,8 @@ namespace potential_gap{
         
         double coefs = cfg_->traj.scale;
         write_trajectory corder(posearr, cfg_->robot_frame_id, coefs);
-        posearr.header.frame_id = cfg_->traj.synthesized_frame ? cfg_->sensor_frame_id : cfg_->robot_frame_id;
+        // posearr.header.frame_id = cfg_->traj.synthesized_frame ? cfg_->sensor_frame_id : cfg_->robot_frame_id;
+        posearr.header.frame_id = cfg_->robot_frame_id;
 
         if (selectedGap.goal.discard) {
             return posearr;
@@ -76,23 +77,25 @@ namespace potential_gap{
         return traj_set;
     }
 
-    // Return in Odom frame (used for ctrl)
     geometry_msgs::PoseArray GapTrajGenerator::transformBackTrajectory(
         geometry_msgs::PoseArray posearr,
-        geometry_msgs::TransformStamped planning2odom)
+        geometry_msgs::TransformStamped trans)
     {
         geometry_msgs::PoseArray retarr;
         geometry_msgs::PoseStamped outplaceholder;
-        outplaceholder.header.frame_id = cfg_->odom_frame_id;
+        // outplaceholder.header.frame_id = cfg_->odom_frame_id;
+        outplaceholder.header.frame_id = trans.header.frame_id;
         geometry_msgs::PoseStamped inplaceholder;
-        inplaceholder.header.frame_id = cfg_->robot_frame_id;
+        // inplaceholder.header.frame_id = cfg_->robot_frame_id;
+        inplaceholder.header.frame_id = trans.child_frame_id;
         for (const auto pose : posearr.poses)
         {
             inplaceholder.pose = pose;
-            tf2::doTransform(inplaceholder, outplaceholder, planning2odom);
+            tf2::doTransform(inplaceholder, outplaceholder, trans);
             retarr.poses.push_back(outplaceholder.pose);
         }
-        retarr.header.frame_id = cfg_->odom_frame_id;
+        // retarr.header.frame_id = cfg_->odom_frame_id;
+        retarr.header.frame_id = trans.header.frame_id;
         retarr.header.stamp = ros::Time::now();
         return retarr;
     }

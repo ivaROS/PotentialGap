@@ -34,6 +34,7 @@ find_package(catkin REQUIRED COMPONENTS
 )
 find_package(Boost REQUIRED COMPONENTS system)
 find_package(Eigen3 REQUIRED)
+find_package(yaml-cpp REQUIRED)
 
 generate_dynamic_reconfigure_options(
   cfg/pg.cfg
@@ -46,6 +47,7 @@ include_directories(
   SYSTEM ${EIGEN3_INCLUDE_DIRS}
   include
   ${catkin_INCLUDE_DIRS}
+  ${YAML_CPP_INCLUDE_DIR}
 )
 
 add_message_files(
@@ -60,15 +62,14 @@ generate_messages(
 )
 
 catkin_package(
- INCLUDE_DIRS include
+ INCLUDE_DIRS include ${EIGEN3_INCLUDE_DIRS} ${YAML_CPP_INCLUDE_DIR}
 #  LIBRARIES potential_gap
-  INCLUDE_DIRS ${EIGEN3_INCLUDE_DIRS}
-  DEPENDS OpenMP 
+  DEPENDS OpenMP yaml-cpp
   CATKIN_DEPENDS base_local_planner dynamic_reconfigure egocircle geometry_msgs nav_msgs roscpp rospy std_msgs sensor_msgs pips_trajectory_msgs message_runtime pips_egocircle
 )
 
-
 add_library(potential_gap
+  src/robot_geo_parser.cpp
   src/planner.cpp
   src/trajectory_follower.cpp
   src/potential_gap.cpp
@@ -87,4 +88,5 @@ target_compile_options(potential_gap PRIVATE ${OpenMP_FLAGS})
 target_link_libraries(potential_gap
 ${catkin_LIBRARIES}
 ${OpenMP_LIBS}
+${YAML_CPP_LIBRARIES}
 )

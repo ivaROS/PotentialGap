@@ -18,6 +18,7 @@
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <sensor_msgs/LaserScan.h>
 #include <boost/shared_ptr.hpp>
+#include <potential_gap/robot_geo_parser.h>
 
 namespace potential_gap
 {
@@ -26,9 +27,17 @@ namespace potential_gap
             GoalSelector() {};
             ~GoalSelector() {};
 
-            GoalSelector(ros::NodeHandle& nh, const potential_gap::PotentialGapConfig& cfg);
-            GoalSelector& operator=(GoalSelector other) {cfg_ = other.cfg_;};
-            GoalSelector(const GoalSelector &t) {cfg_ = t.cfg_;};
+            GoalSelector(ros::NodeHandle& nh, const potential_gap::PotentialGapConfig& cfg, RobotGeoProc& robot_geo_proc);
+            GoalSelector& operator=(GoalSelector other) 
+            {
+                cfg_ = other.cfg_;
+                robot_geo_proc_ = other.robot_geo_proc_;
+            };
+            GoalSelector(const GoalSelector &t) 
+            {
+                cfg_ = t.cfg_;
+                robot_geo_proc_ = t.robot_geo_proc_;
+            };
 
             // Map Frame
             bool setGoal(const std::vector<geometry_msgs::PoseStamped> &);
@@ -36,12 +45,13 @@ namespace potential_gap
             void updateLocalGoal(geometry_msgs::TransformStamped map2rbt);
             geometry_msgs::PoseStamped getCurrentLocalGoal(geometry_msgs::TransformStamped rbt2odom);
             geometry_msgs::PoseStamped rbtFrameLocalGoal() {return local_goal;};
-            std::vector<geometry_msgs::PoseStamped> getOdomGlobalPlan();
+            std::vector<geometry_msgs::PoseStamped> getRawGlobalPlan();
             std::vector<geometry_msgs::PoseStamped> getRelevantGlobalPlan(geometry_msgs::TransformStamped);
 
 
         private:
             const PotentialGapConfig* cfg_;
+            RobotGeoProc robot_geo_proc_;
             boost::shared_ptr<sensor_msgs::LaserScan const> sharedPtr_laser;
             std::vector<geometry_msgs::PoseStamped> global_plan;
             std::vector<geometry_msgs::PoseStamped> mod_plan;

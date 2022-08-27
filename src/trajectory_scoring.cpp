@@ -1,7 +1,7 @@
 #include <potential_gap/trajectory_scoring.h>
 
 namespace potential_gap {
-    TrajectoryArbiter::TrajectoryArbiter(ros::NodeHandle& nh, const potential_gap::PotentialGapConfig& cfg)
+    TrajectoryArbiter::TrajectoryArbiter(ros::NodeHandle& nh, const potential_gap::PotentialGapConfig& cfg, RobotGeoProc& robot_geo_proc)
     {
         cfg_ = & cfg;
         r_inscr = cfg_->rbt.r_inscr;
@@ -9,6 +9,7 @@ namespace potential_gap {
         cobs = cfg_->traj.cobs;
         w = cfg_->traj.w;
         terminal_weight = cfg_->traj.terminal_weight;
+        robot_geo_proc_ = robot_geo_proc;
     }
 
     void TrajectoryArbiter::updateEgoCircle(boost::shared_ptr<sensor_msgs::LaserScan const> msg_) {
@@ -70,7 +71,6 @@ namespace potential_gap {
         // Requires LOCAL FRAME
         // Should be no racing condition
         std::vector<double> cost_val(traj.poses.size());
-
         for (int i = 0; i < cost_val.size(); i++) {
             cost_val.at(i) = scorePose(traj.poses.at(i));
         }
@@ -106,11 +106,12 @@ namespace potential_gap {
         boost::mutex::scoped_lock lock(egocircle_mutex);
         sensor_msgs::LaserScan stored_scan = *msg.get();
 
-        double pose_ori = std::atan2(pose.position.y + 1e-3, pose.position.x + 1e-3);
-        int center_idx = (int) std::round((pose_ori + M_PI) / msg.get()->angle_increment);
+        // double pose_ori = std::atan2(pose.position.y + 1e-3, pose.position.x + 1e-3);
+        // int center_idx = (int) std::round((pose_ori + M_PI) / msg.get()->angle_increment);
         
         int scan_size = (int) stored_scan.ranges.size();
         std::vector<double> dist(scan_size);
+        std::vector<double> rmax_offset(scan_size);
 
         // This size **should** be ensured
         if (stored_scan.ranges.size() < 500) {
@@ -120,29 +121,42 @@ namespace potential_gap {
         for (int i = 0; i < dist.size(); i++) {
             float this_dist = stored_scan.ranges.at(i);
             this_dist = this_dist == 3 ? this_dist + cfg_->traj.rmax : this_dist;
+            
+            // Get the robot equivalent radius
+            Eigen::Quaterniond q(pose.orientation.w, pose.orientation.x, pose.orientation.y, pose.orientation.z);
+            auto euler = q.toRotationMatrix().eulerAngles(0, 1, 2);
+            Eigen::Vector2d orient_vec(cos(euler[2]), sin(euler[2]));
+            Eigen::Vector2d pose_position_vec(pose.position.x, pose.position.y);
+            Eigen::Vector2d scan_pt_vec(this_dist * cos(i * stored_scan.angle_increment - M_PI), this_dist * sin(i * stored_scan.angle_increment - M_PI));
+            Eigen::Vector2d relative_vec = scan_pt_vec - pose_position_vec;
+            relative_vec = relative_vec / relative_vec.norm();
+            double robot_er = robot_geo_proc_.getEquivalentR(orient_vec, relative_vec);
             dist.at(i) = dist2Pose(i * stored_scan.angle_increment - M_PI,
                 this_dist, pose);
+            dist.at(i) -= robot_er * cfg_->traj.inf_ratio;
+            rmax_offset.at(i) = rmax - robot_er * cfg_->traj.inf_ratio;
         }
 
         auto iter = std::min_element(dist.begin(), dist.end());
-        return chapterScore(*iter);
+        double rmax_offset_val = rmax_offset[iter - dist.begin()];
+        return chapterScore(*iter, rmax_offset_val);
     }
 
-    double TrajectoryArbiter::chapterScore(double d) {
-        if (d < r_inscr * cfg_->traj.inf_ratio) return -std::numeric_limits<double>::infinity();
-        if (d > rmax) return 0;
-        return cobs * std::exp(- w * (d - r_inscr * cfg_->traj.inf_ratio));
+    double TrajectoryArbiter::chapterScore(double d, double rmax_offset_val) {
+        if (d < 0) return -std::numeric_limits<double>::infinity();
+        if (d > rmax_offset_val) return 0;
+        return cobs * std::exp(- w * (d));
     }
 
-    int TrajectoryArbiter::searchIdx(geometry_msgs::Pose pose) {
-        if (!msg) return 1;
-        double r = sqrt(pow(pose.position.x, 2) + pow(pose.position.y, 2));
-        double eval = double(cfg_->rbt.r_inscr) / r;
-        if (eval > 1) return 1;
-        float theta = float(std::acos( eval ));
-        int searchIdx = (int) std::ceil(theta / msg.get()->angle_increment);
-        return searchIdx;
-    }
+    // int TrajectoryArbiter::searchIdx(geometry_msgs::Pose pose) {
+    //     if (!msg) return 1;
+    //     double r = sqrt(pow(pose.position.x, 2) + pow(pose.position.y, 2));
+    //     double eval = double(cfg_->rbt.r_inscr) / r;
+    //     if (eval > 1) return 1;
+    //     float theta = float(std::acos( eval ));
+    //     int searchIdx = (int) std::ceil(theta / msg.get()->angle_increment);
+    //     return searchIdx;
+    // }
 
     potential_gap::Gap TrajectoryArbiter::returnAndScoreGaps() {
         boost::mutex::scoped_lock gaplock(gap_mutex);

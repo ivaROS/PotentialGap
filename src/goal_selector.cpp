@@ -2,8 +2,9 @@
 
 namespace potential_gap {
     GoalSelector::GoalSelector(ros::NodeHandle& nh,
-    const potential_gap::PotentialGapConfig& cfg) {
+    const potential_gap::PotentialGapConfig& cfg, RobotGeoProc& robot_geo_proc) {
         cfg_ = &cfg;
+        robot_geo_proc_ = robot_geo_proc;
     }
 
     bool GoalSelector::setGoal(
@@ -52,10 +53,12 @@ namespace potential_gap {
     }
 
     bool GoalSelector::NoTVisibleOrPossiblyObstructed(geometry_msgs::PoseStamped pose) {
+        // If all poses are within the egocircle, this will return the end of the plan.
         int laserScanIdx = PoseIndexInSensorMsg(pose);
-        float epsilon2 = float(cfg_->gap_manip.epsilon2);
+        // float epsilon2 = float(cfg_->gap_manip.epsilon2);
         sensor_msgs::LaserScan stored_scan_msgs = *sharedPtr_laser.get();
-        bool check = dist2rbt(pose) > (double (stored_scan_msgs.ranges.at(laserScanIdx)) - cfg_->rbt.r_inscr / 2);
+        bool check = dist2rbt(pose) >= (double (stored_scan_msgs.ranges.at(laserScanIdx)) - robot_geo_proc_.getRobotMaxRadius() / 2);
+        // bool check = dist2rbt(pose) >= (double (stored_scan_msgs.ranges.at(laserScanIdx)));
         return check;
     }
 
@@ -63,8 +66,10 @@ namespace potential_gap {
         int laserScanIdx = PoseIndexInSensorMsg(pose);
         float epsilon2 = float(cfg_->gap_manip.epsilon2);
         sensor_msgs::LaserScan stored_scan_msgs = *sharedPtr_laser.get();
-        bool check = dist2rbt(pose) < (double (stored_scan_msgs.ranges.at(laserScanIdx)) - cfg_->rbt.r_inscr / 2) || 
+        bool check = dist2rbt(pose) < (double (stored_scan_msgs.ranges.at(laserScanIdx)) - robot_geo_proc_.getRobotMaxRadius() / 2) || 
             dist2rbt(pose) > (double (stored_scan_msgs.ranges.at(laserScanIdx)) + epsilon2 * 2);
+        // bool check = dist2rbt(pose) < (double (stored_scan_msgs.ranges.at(laserScanIdx))) || 
+        //     dist2rbt(pose) > (double (stored_scan_msgs.ranges.at(laserScanIdx)) + epsilon2 * 2);
         return check;
     }
 
@@ -103,6 +108,7 @@ namespace potential_gap {
         threshold = (double) *std::max_element(stored_scan_msgs.ranges.begin(), stored_scan_msgs.ranges.end());
 
         // Find closest pose to robot
+        // TODO: may need to improve
         auto start_pose = std::min_element(distance.begin(), distance.end());
         auto end_pose = std::find_if(start_pose, distance.end(),
             std::bind1st(std::mem_fun(&GoalSelector::isNotWithin), this));
@@ -140,7 +146,7 @@ namespace potential_gap {
         return result;
     }
 
-    std::vector<geometry_msgs::PoseStamped> GoalSelector::getOdomGlobalPlan() {
+    std::vector<geometry_msgs::PoseStamped> GoalSelector::getRawGlobalPlan() {
         return global_plan;
     }
 

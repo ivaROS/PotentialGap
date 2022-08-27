@@ -53,6 +53,8 @@
 
 #include <potential_gap/CollisionCheckerConfig.h>
 
+#include <potential_gap/robot_geo_parser.h>
+
 #ifndef PLANNER_H
 #define PLANNER_H
 
@@ -107,7 +109,9 @@ namespace potential_gap
         geometry_msgs::TransformStamped rbt2odom;
         geometry_msgs::TransformStamped map2odom;
         geometry_msgs::TransformStamped cam2odom;
+        geometry_msgs::TransformStamped odom2cam;
         geometry_msgs::TransformStamped rbt2cam;
+        geometry_msgs::TransformStamped cam2rbt;
 
         geometry_msgs::PoseStamped goal_rbt_frame;
         geometry_msgs::PoseStamped curr_pose_odom;
@@ -125,6 +129,9 @@ namespace potential_gap
         ros::Publisher selected_gap_vis_pub;
         ros::Publisher ni_traj_pub;
         ros::Publisher ni_traj_pub_other;
+
+        ros::Publisher transformed_laser_pub;
+        ros::Publisher virtual_orient_traj_pub;
 
         // Goals and stuff
         // double goal_orientation;
@@ -183,6 +190,12 @@ namespace potential_gap
 
         boost::circular_buffer<double> log_vel_comp;
 
+        bool use_geo_storage_;
+        RobotGeoStorage robot_geo_storage_;
+        RobotGeoProc robot_geo_proc_;
+        bool robot_path_orient_linear_decay_, virtual_path_decay_enable_;
+        double speed_factor_;
+
     public:
         Planner();
 
@@ -217,6 +230,8 @@ namespace potential_gap
          */
         void laserScanCB(boost::shared_ptr<sensor_msgs::LaserScan const> msg);
         void inflatedlaserScanCB(boost::shared_ptr<sensor_msgs::LaserScan const> msg);
+
+        boost::shared_ptr<sensor_msgs::LaserScan const> transformLaserToRbt(boost::shared_ptr<sensor_msgs::LaserScan const> msg);
 
         /**
          * call back function to pose, pose information obtained here only used when a new goal is used
@@ -266,7 +281,7 @@ namespace potential_gap
          * 
          *
          */
-        std::vector<std::vector<double>> initialTrajGen(std::vector<potential_gap::Gap>, std::vector<geometry_msgs::PoseArray>&);
+        std::vector<std::vector<double>> initialTrajGen(std::vector<potential_gap::Gap>, std::vector<geometry_msgs::PoseArray>&, std::vector<geometry_msgs::PoseArray>& virtual_decayed);
 
         /**
          * Callback function to config object
@@ -281,14 +296,16 @@ namespace potential_gap
          * @param Vector of corresponding trajectory scores
          * @return the best trajectory
          */
-        geometry_msgs::PoseArray pickTraj(std::vector<geometry_msgs::PoseArray>, std::vector<std::vector<double>>);
+        geometry_msgs::PoseArray pickTraj(std::vector<geometry_msgs::PoseArray>, std::vector<std::vector<double>>, std::vector<geometry_msgs::PoseArray> virtual_path, geometry_msgs::PoseArray& chosen_virtual_path);
 
         /**
          * Compare to the old trajectory and pick the best one
          * @param incoming trajectory
          * @return the best trajectory  
          */
-        geometry_msgs::PoseArray compareToOldTraj(geometry_msgs::PoseArray);
+        geometry_msgs::PoseArray compareToOldTraj(geometry_msgs::PoseArray, geometry_msgs::PoseArray& virtual_curr_traj);
+
+        geometry_msgs::PoseArray getOrientDecayedPath(geometry_msgs::PoseArray);
 
         CollisionResults checkCollision(const geometry_msgs::PoseArray path);
 

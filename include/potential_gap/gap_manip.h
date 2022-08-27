@@ -12,6 +12,7 @@
 #include <Eigen/Geometry>
 #include <sensor_msgs/LaserScan.h>
 #include <boost/shared_ptr.hpp>
+#include <potential_gap/robot_geo_parser.h>
 
 namespace potential_gap {
     class GapManipulator {
@@ -19,9 +20,21 @@ namespace potential_gap {
             GapManipulator(){};
             ~GapManipulator(){};
 
-            GapManipulator(ros::NodeHandle& nh, const potential_gap::PotentialGapConfig& cfg) {cfg_ = &cfg;};
-            GapManipulator& operator=(GapManipulator & other) {cfg_ = other.cfg_;};
-            GapManipulator(const GapManipulator &t) {cfg_ = t.cfg_;};
+            GapManipulator(ros::NodeHandle& nh, const potential_gap::PotentialGapConfig& cfg, RobotGeoProc& robot_geo_proc) 
+            {
+                cfg_ = &cfg;
+                robot_geo_proc_ = robot_geo_proc;
+            };
+            GapManipulator& operator=(GapManipulator & other) 
+            {
+                cfg_ = other.cfg_;
+                robot_geo_proc_ = other.robot_geo_proc_;
+            };
+            GapManipulator(const GapManipulator &t) 
+            {
+                cfg_ = t.cfg_;
+                robot_geo_proc_ = t.robot_geo_proc_;
+            };
 
             void updateEgoCircle(boost::shared_ptr<sensor_msgs::LaserScan const>);
 
@@ -39,6 +52,8 @@ namespace potential_gap {
             Eigen::Vector2f pol2car(Eigen::Vector2f);
             Eigen::Vector2f pTheta(float, float, Eigen::Vector2f, Eigen::Vector2f);
             bool checkGoalVisibility(geometry_msgs::PoseStamped);
+
+            RobotGeoProc robot_geo_proc_;
 
 
     };
