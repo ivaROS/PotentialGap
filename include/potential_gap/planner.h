@@ -170,6 +170,7 @@ namespace potential_gap
         int ctrl_idx = 0;
 
         geometry_msgs::Pose sharedPtr_pose;
+        nav_msgs::Odometry sharedPtr_odom;
         boost::shared_ptr<sensor_msgs::LaserScan const> sharedPtr_laser;
         boost::shared_ptr<sensor_msgs::LaserScan const> sharedPtr_inflatedlaser;
 
@@ -190,11 +191,16 @@ namespace potential_gap
 
         boost::circular_buffer<double> log_vel_comp;
 
+        bool goal_set = false;
+        // Box modification
         bool use_geo_storage_;
         RobotGeoStorage robot_geo_storage_;
         RobotGeoProc robot_geo_proc_;
         bool robot_path_orient_linear_decay_, virtual_path_decay_enable_;
         double speed_factor_;
+
+        // Bezier curve
+        bool use_bezier_;
 
     public:
         Planner();

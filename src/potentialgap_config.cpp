@@ -76,6 +76,8 @@ namespace potential_gap {
         nh.param("inf_ratio", traj.inf_ratio, traj.inf_ratio);
         nh.param("terminal_weight", traj.terminal_weight, traj.terminal_weight);
         nh.param("waypoint_ratio", traj.waypoint_ratio, traj.waypoint_ratio);
+        nh.param("bezier_cp_scale", traj.bezier_cp_scale, traj.bezier_cp_scale);
+        nh.param("robot_geo_scale", traj.robot_geo_scale, traj.robot_geo_scale);
         
         // Robot
         nh.param("r_inscr", rbt.r_inscr, rbt.r_inscr);
@@ -151,6 +153,8 @@ namespace potential_gap {
         traj.inf_ratio = cfg.inf_ratio;
         traj.terminal_weight = cfg.terminal_weight;
         traj.waypoint_ratio = cfg.waypoint_ratio;
+        traj.bezier_cp_scale = cfg.bezier_cp_scale;
+        traj.robot_geo_scale = cfg.robot_geo_scale;
 
         man.man_ctrl = cfg.man_ctrl;
         man.man_x = cfg.man_x;

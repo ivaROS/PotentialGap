@@ -49,7 +49,8 @@ namespace potential_gap {
                     // Find equivalent passing length
                     Eigen::Vector2d orient_vec(1, 0);
                     Eigen::Vector2d m_pt_vec = detected_gap.get_middle_pt_vec();
-                    double epl = robot_geo_proc_.getDecayEquivalentPL(orient_vec, m_pt_vec, m_pt_vec.norm());
+                    // double epl = robot_geo_proc_.getDecayEquivalentPL(orient_vec, m_pt_vec, m_pt_vec.norm());
+                    double epl = robot_geo_proc_.getLinearDecayEquivalentPL(orient_vec, m_pt_vec, m_pt_vec.norm());
                     if (detected_gap.get_dist_side() > epl || cfg_->planning.planning_inflated) observed_gaps.push_back(detected_gap);
                 }
                 
@@ -70,7 +71,8 @@ namespace potential_gap {
                     // Find equivalent passing length
                     Eigen::Vector2d orient_vec(1, 0);
                     Eigen::Vector2d m_pt_vec = detected_gap.get_middle_pt_vec();
-                    double epl = robot_geo_proc_.getDecayEquivalentPL(orient_vec, m_pt_vec, m_pt_vec.norm());
+                    // double epl = robot_geo_proc_.getDecayEquivalentPL(orient_vec, m_pt_vec, m_pt_vec.norm());
+                    double epl = robot_geo_proc_.getLinearDecayEquivalentPL(orient_vec, m_pt_vec, m_pt_vec.norm());
                     if (detected_gap.get_dist_side() > epl || cfg_->planning.planning_inflated) observed_gaps.push_back(detected_gap);
                 }
                 else // previously not marked a gap, not marking the gap
@@ -91,7 +93,8 @@ namespace potential_gap {
             detected_gap.setMinSafeDist(min_dist);
             Eigen::Vector2d orient_vec(1, 0);
             Eigen::Vector2d m_pt_vec = detected_gap.get_middle_pt_vec();
-            double epl = robot_geo_proc_.getDecayEquivalentPL(orient_vec, m_pt_vec, m_pt_vec.norm());
+            // double epl = robot_geo_proc_.getDecayEquivalentPL(orient_vec, m_pt_vec, m_pt_vec.norm());
+            double epl = robot_geo_proc_.getLinearDecayEquivalentPL(orient_vec, m_pt_vec, m_pt_vec.norm());
             if (detected_gap._right_idx - detected_gap._left_idx > 500 || detected_gap.get_dist_side() > epl) observed_gaps.push_back(detected_gap);
         }
         
@@ -158,7 +161,7 @@ namespace potential_gap {
                             int erase_counter = 0;
                             int last_mergable = -1;
 
-                            float coefs = cfg_->planning.planning_inflated ? 0 : 2;
+                            float coefs = cfg_->planning.planning_inflated ? 0 : 1;
                             for (int j = (int) (second_gap.size() - 1); j >= 0; j--)
                             {
                                 int start_idx = std::min(second_gap[j].RIdx(), observed_gaps[i].LIdx());
@@ -166,8 +169,13 @@ namespace potential_gap {
                                 auto farside_iter = std::min_element(stored_scan_msgs.ranges.begin() + start_idx, stored_scan_msgs.ranges.begin() + end_idx);
                                 int farside_idx = farside_iter - stored_scan_msgs.ranges.begin();
                                 // TODO: what number to use? Currently, use the max radius. The merging will not happen frequently.
-                                double max_r_er = robot_geo_proc_.getRobotMaxRadius();
-                                bool second_test = curr_rdist <= (*farside_iter - coefs * max_r_er) && second_gap[j].LDist() <= (*farside_iter - coefs * max_r_er);
+                                // double max_r_er = robot_geo_proc_.getRobotMaxRadius();
+                                double farside_angle = farside_idx * stored_scan_msgs.angle_increment + stored_scan_msgs.angle_min;
+                                Eigen::Vector2d farside_vec(cos(farside_angle), sin(farside_angle));
+                                Eigen::Vector2d orient_vec(1, 0);
+                                double erl_rdist = robot_geo_proc_.getLinearDecayEquivalentRL(orient_vec, farside_vec, curr_rdist);
+                                double erl_ldist = robot_geo_proc_.getLinearDecayEquivalentRL(orient_vec, farside_vec, second_gap[j].LDist());
+                                bool second_test = curr_rdist <= (*farside_iter - coefs * erl_rdist) && second_gap[j].LDist() <= (*farside_iter - coefs * erl_ldist);
                                 bool dist_diff = second_gap[j].isLeftType() || !second_gap[j].isAxial();
                                 bool idx_diff = observed_gaps[i].RIdx() - second_gap[j].LIdx() < cfg_->gap_manip.max_idx_diff;
                                 if (second_test && dist_diff && idx_diff) {

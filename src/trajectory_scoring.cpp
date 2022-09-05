@@ -121,24 +121,39 @@ namespace potential_gap {
         for (int i = 0; i < dist.size(); i++) {
             float this_dist = stored_scan.ranges.at(i);
             this_dist = this_dist == 3 ? this_dist + cfg_->traj.rmax : this_dist;
-            
-            // Get the robot equivalent radius
+
+            // Iterate through robot boundary
             Eigen::Quaterniond q(pose.orientation.w, pose.orientation.x, pose.orientation.y, pose.orientation.z);
             auto euler = q.toRotationMatrix().eulerAngles(0, 1, 2);
             Eigen::Vector2d orient_vec(cos(euler[2]), sin(euler[2]));
-            Eigen::Vector2d pose_position_vec(pose.position.x, pose.position.y);
-            Eigen::Vector2d scan_pt_vec(this_dist * cos(i * stored_scan.angle_increment - M_PI), this_dist * sin(i * stored_scan.angle_increment - M_PI));
-            Eigen::Vector2d relative_vec = scan_pt_vec - pose_position_vec;
-            relative_vec = relative_vec / relative_vec.norm();
-            double robot_er = robot_geo_proc_.getEquivalentR(orient_vec, relative_vec);
-            dist.at(i) = dist2Pose(i * stored_scan.angle_increment - M_PI,
-                this_dist, pose);
-            dist.at(i) -= robot_er * cfg_->traj.inf_ratio;
-            rmax_offset.at(i) = rmax - robot_er * cfg_->traj.inf_ratio;
+            double pt_ang = i * stored_scan.angle_increment - M_PI;
+            pt_ang = (pt_ang >= -M_PI) ? pt_ang : -M_PI;
+            pt_ang = (pt_ang <= M_PI) ? pt_ang : M_PI;
+            Eigen::Vector2d pt_vec(cos(pt_ang), sin(pt_ang));
+            pt_vec = this_dist * pt_vec;
+            Eigen::Vector2d pose_vec(pose.position.x, pose.position.y); // TODO: pose should be in robot frame
+            Eigen::Vector2d rel_pt_vec = pt_vec - pose_vec;
+            double nearest_dist = robot_geo_proc_.getNearestDistance(orient_vec, rel_pt_vec);
+            dist.at(i) = nearest_dist;
+            // ROS_INFO_STREAM(dist.at(i));
+            // rmax_offset.at(i) = rmax - robot_geo_proc_.getRobotMaxRadius() * cfg_->traj.inf_ratio;
+            
+            // Get the robot equivalent radius
+            
+            // Eigen::Vector2d pose_position_vec(pose.position.x, pose.position.y);
+            // Eigen::Vector2d scan_pt_vec(this_dist * cos(i * stored_scan.angle_increment - M_PI), this_dist * sin(i * stored_scan.angle_increment - M_PI));
+            // Eigen::Vector2d relative_vec = scan_pt_vec - pose_position_vec;
+            // relative_vec = relative_vec / relative_vec.norm();
+            // double robot_er = robot_geo_proc_.getEquivalentR(orient_vec, relative_vec);
+            // dist.at(i) = dist2Pose(i * stored_scan.angle_increment - M_PI,
+            //     this_dist, pose);
+            // dist.at(i) -= robot_er * cfg_->traj.inf_ratio;
+            // rmax_offset.at(i) = rmax - robot_er * cfg_->traj.inf_ratio;
         }
 
         auto iter = std::min_element(dist.begin(), dist.end());
-        double rmax_offset_val = rmax_offset[iter - dist.begin()];
+        // double rmax_offset_val = rmax_offset[iter - dist.begin()];
+        double rmax_offset_val = rmax - robot_geo_proc_.getRobotMaxRadius() * cfg_->traj.inf_ratio;
         return chapterScore(*iter, rmax_offset_val);
     }
 

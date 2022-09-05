@@ -39,13 +39,15 @@ namespace potential_gap
         unh.getParam("shape_id", shape_id);
         unh.setParam("shape_id", shape_id);
 
-        double length = 0.7, width = 0.3, decay_factor = 0;
+        double length = 0.7, width = 0.3, decay_factor = 0, avg_lin_speed = 0.2, avg_rot_speed = 0.5;
         unh.getParam("length", length);
         unh.getParam("width", width);
         unh.getParam("decay_factor", decay_factor);
+        unh.getParam("avg_lin_speed", avg_lin_speed);
         unh.setParam("length", length);
         unh.setParam("width", width);
         unh.setParam("decay_factor", decay_factor);
+        unh.setParam("avg_rot_speed", avg_rot_speed);
 
         RobotShape robot_shape = static_cast<RobotShape>(shape_id);
         if(robot_shape == RobotShape::circle)
@@ -71,6 +73,11 @@ namespace potential_gap
         speed_factor_ = 2;
         unh.getParam("speed_factor", speed_factor_);
         unh.setParam("speed_factor", speed_factor_);
+
+        // Bezier curve
+        use_bezier_ = true;
+        unh.getParam("use_bezier", use_bezier_);
+        unh.setParam("use_bezier", use_bezier_);
         
         // Debug robot geometry storage and process
         // robot_geo_storage_ = RobotGeoStorage(file_name);
@@ -117,7 +124,7 @@ namespace potential_gap
         goalselector = new potential_gap::GoalSelector(nh, cfg, robot_geo_proc_);
         trajvisualizer = new potential_gap::TrajectoryVisualizer(nh, cfg);
         trajArbiter = new potential_gap::TrajectoryArbiter(nh, cfg, robot_geo_proc_);
-        gapTrajSyn = new potential_gap::GapTrajGenerator(nh, cfg);
+        gapTrajSyn = new potential_gap::GapTrajGenerator(nh, cfg, robot_geo_proc_);
         goalvisualizer = new potential_gap::GoalVisualizer(nh, cfg);
         gapManip = new potential_gap::GapManipulator(nh, cfg, robot_geo_proc_);
         trajController = new potential_gap::TrajectoryController(nh, cfg);
@@ -292,16 +299,18 @@ namespace potential_gap
         // }
 
         // If no global plan, the local goal finding won't execute.
+        goalselector->updateEgoCircle(tmp_msg);
+        trajArbiter->updateEgoCircle(tmp_msg);
+
         geometry_msgs::PoseStamped local_goal;
+        if(goal_set)
         {
-            goalselector->updateEgoCircle(tmp_msg);
             goalselector->updateLocalGoal(map2rbt);
             local_goal = goalselector->getCurrentLocalGoal(rbt2odom);
             goalvisualizer->localGoal(local_goal);
-        }
         
-        trajArbiter->updateEgoCircle(tmp_msg);
-        trajArbiter->updateLocalGoal(local_goal, odom2rbt);
+            trajArbiter->updateLocalGoal(local_goal, odom2rbt);
+        }
 
         gapManip->updateEgoCircle(tmp_msg);
         trajController->updateEgoCircle(tmp_msg);
@@ -321,15 +330,21 @@ namespace potential_gap
 
             tf2::doTransform(in_pose, out_pose, robot_pose_odom_trans);
             sharedPtr_pose = out_pose.pose;
+            sharedPtr_odom = *msg;
+            sharedPtr_odom.pose.pose = out_pose.pose;
+            sharedPtr_odom.header.frame_id = cfg.odom_frame_id;
         }
         else
         {
             sharedPtr_pose = msg->pose.pose;
+            sharedPtr_odom = *msg;
         }
     }
 
     bool Planner::setGoal(const std::vector<geometry_msgs::PoseStamped> &plan)
     {
+        updateTF();
+
         if (plan.size() == 0) return true;
         final_goal_odom = *std::prev(plan.end());
         tf2::doTransform(final_goal_odom, final_goal_odom, map2odom);
@@ -373,6 +388,7 @@ namespace potential_gap
             ROS_FATAL_STREAM("getRelevantGlobalPlan");
         }
 
+        goal_set = true;
         return true;
     }
 
@@ -441,10 +457,20 @@ namespace potential_gap
         rbt_local_pose.header.frame_id = cfg.robot_frame_id;
         rbt_local_pose.header.stamp = rbt2odom.header.stamp;
         rbt_local_pose.pose.orientation.w = 1;
+        ROS_INFO_STREAM("Gap number: " << vec.size());
         try {
             for (size_t i = 0; i < vec.size(); i++) {
                 // Generate trajectory in robot frame.
-                auto tmp = gapTrajSyn->generateTrajectory(vec.at(i), rbt_local_pose);
+                geometry_msgs::PoseArray tmp;
+                if(use_bezier_)
+                {
+                    tmp = gapTrajSyn->generateBezierTrajectory(vec.at(i), sharedPtr_odom, odom2rbt);
+                }
+                else
+                {
+                    tmp = gapTrajSyn->generateTrajectory(vec.at(i), rbt_local_pose);
+                }
+                
                 tmp = gapTrajSyn->forwardPassTrajectory(tmp);
                 // auto tmp_rbt = gapTrajSyn->transformBackTrajectory(tmp, cam2rbt);
                 auto virtual_score_path = getOrientDecayedPath(tmp);
@@ -471,7 +497,7 @@ namespace potential_gap
 
         if(orig_path.poses.size() <= 1)
         {
-            ROS_WARN("[getOrientDecayedPath] Original path is too short.");
+            ROS_WARN_STREAM("[getOrientDecayedPath] Original path is too short with size [ " << orig_path.poses.size() << " ].");
             decayed_path = orig_path;
             return decayed_path;
         }

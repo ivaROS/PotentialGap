@@ -92,6 +92,8 @@ namespace potential_gap {
                 double inf_ratio;
                 double terminal_weight;
                 double waypoint_ratio;
+                double bezier_cp_scale;
+                double robot_geo_scale;
             } traj;
 
             struct Robot {
@@ -173,6 +175,8 @@ namespace potential_gap {
             traj.inf_ratio = 1.2;
             traj.terminal_weight = 10;
             traj.waypoint_ratio = 1.5;
+            traj.bezier_cp_scale = 1;
+            traj.robot_geo_scale = 1;
 
             man.man_ctrl = false;
             man.man_x = 0;

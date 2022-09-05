@@ -57,7 +57,10 @@ namespace potential_gap {
         int laserScanIdx = PoseIndexInSensorMsg(pose);
         // float epsilon2 = float(cfg_->gap_manip.epsilon2);
         sensor_msgs::LaserScan stored_scan_msgs = *sharedPtr_laser.get();
-        bool check = dist2rbt(pose) >= (double (stored_scan_msgs.ranges.at(laserScanIdx)) - robot_geo_proc_.getRobotMaxRadius() / 2);
+        Eigen::Vector2d pose_vec(pose.pose.position.x, pose.pose.position.y);
+        Eigen::Vector2d orient_vec(1, 0);
+        double buffer_length = robot_geo_proc_.getLinearDecayEquivalentRL(orient_vec, pose_vec, pose_vec.norm());
+        bool check = dist2rbt(pose) >= (double (stored_scan_msgs.ranges.at(laserScanIdx)) - buffer_length);
         // bool check = dist2rbt(pose) >= (double (stored_scan_msgs.ranges.at(laserScanIdx)));
         return check;
     }
@@ -66,7 +69,10 @@ namespace potential_gap {
         int laserScanIdx = PoseIndexInSensorMsg(pose);
         float epsilon2 = float(cfg_->gap_manip.epsilon2);
         sensor_msgs::LaserScan stored_scan_msgs = *sharedPtr_laser.get();
-        bool check = dist2rbt(pose) < (double (stored_scan_msgs.ranges.at(laserScanIdx)) - robot_geo_proc_.getRobotMaxRadius() / 2) || 
+        Eigen::Vector2d pose_vec(pose.pose.position.x, pose.pose.position.y);
+        Eigen::Vector2d orient_vec(1, 0);
+        double buffer_length = robot_geo_proc_.getLinearDecayEquivalentRL(orient_vec, pose_vec, pose_vec.norm());
+        bool check = dist2rbt(pose) < (double (stored_scan_msgs.ranges.at(laserScanIdx)) - buffer_length) || 
             dist2rbt(pose) > (double (stored_scan_msgs.ranges.at(laserScanIdx)) + epsilon2 * 2);
         // bool check = dist2rbt(pose) < (double (stored_scan_msgs.ranges.at(laserScanIdx))) || 
         //     dist2rbt(pose) > (double (stored_scan_msgs.ranges.at(laserScanIdx)) + epsilon2 * 2);
