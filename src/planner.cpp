@@ -348,10 +348,10 @@ namespace potential_gap
         if (plan.size() == 0) return true;
 
         // plan should be in global frame
-        geometry_msgs::TransformStamped other_to_global_trans = tfBuffer->lookupTransform(cfg.map_frame_id, plan[0].header.frame_id, ros::Time(0));
         std::vector<geometry_msgs::PoseStamped> global_plan;
         if(plan[0].header.frame_id != cfg.map_frame_id)
         {
+            geometry_msgs::TransformStamped other_to_global_trans = tfBuffer->lookupTransform(cfg.map_frame_id, plan[0].header.frame_id, ros::Time(0));
             for(size_t i = 0; i < plan.size(); i++)
             {
                 geometry_msgs::PoseStamped plan_pose = plan[i];
@@ -361,6 +361,10 @@ namespace potential_gap
                 out_pose.header.frame_id = cfg.map_frame_id;
                 global_plan.push_back(out_pose);
             }
+        }
+        else
+        {
+            global_plan = plan;
         }
         
         final_goal_odom = *std::prev(global_plan.end());
