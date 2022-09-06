@@ -134,7 +134,7 @@ namespace potential_gap{
         
         if(cp_max_length <= 0)
         {
-            ROS_WARN_STREAM("The circle is smaller than robot diagonal / 2.");
+            ROS_WARN_STREAM("The circle is smaller than robot thresh.");
             return success;
         }
 
@@ -588,7 +588,7 @@ namespace potential_gap{
         }
         // retarr.header.frame_id = cfg_->odom_frame_id;
         retarr.header.frame_id = trans.header.frame_id;
-        retarr.header.stamp = ros::Time::now();
+        retarr.header.stamp = trans.header.stamp;
         return retarr;
     }
 

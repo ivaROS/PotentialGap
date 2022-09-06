@@ -63,7 +63,7 @@ generate_messages(
 
 catkin_package(
  INCLUDE_DIRS include ${EIGEN3_INCLUDE_DIRS} ${YAML_CPP_INCLUDE_DIR}
-#  LIBRARIES potential_gap
+ LIBRARIES potential_gap
   DEPENDS OpenMP yaml-cpp
   CATKIN_DEPENDS base_local_planner dynamic_reconfigure egocircle geometry_msgs nav_msgs roscpp rospy std_msgs sensor_msgs pips_trajectory_msgs message_runtime pips_egocircle
 )

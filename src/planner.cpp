@@ -346,11 +346,28 @@ namespace potential_gap
         updateTF();
 
         if (plan.size() == 0) return true;
-        final_goal_odom = *std::prev(plan.end());
+
+        // plan should be in global frame
+        geometry_msgs::TransformStamped other_to_global_trans = tfBuffer->lookupTransform(cfg.map_frame_id, plan[0].header.frame_id, ros::Time(0));
+        std::vector<geometry_msgs::PoseStamped> global_plan;
+        if(plan[0].header.frame_id != cfg.map_frame_id)
+        {
+            for(size_t i = 0; i < plan.size(); i++)
+            {
+                geometry_msgs::PoseStamped plan_pose = plan[i];
+                geometry_msgs::PoseStamped out_pose;
+                tf2::doTransform(plan_pose, out_pose, other_to_global_trans);
+                out_pose.header.stamp = plan_pose.header.stamp;
+                out_pose.header.frame_id = cfg.map_frame_id;
+                global_plan.push_back(out_pose);
+            }
+        }
+        
+        final_goal_odom = *std::prev(global_plan.end());
         tf2::doTransform(final_goal_odom, final_goal_odom, map2odom);
 
         // Store New Global Plan to Goal Selector
-        goalselector->setGoal(plan);
+        goalselector->setGoal(global_plan);
         
         trajvisualizer->rawGlobalPlan(goalselector->getRawGlobalPlan());
 
@@ -853,6 +870,58 @@ namespace potential_gap
         }
         
         return final_traj;
+    }
+
+    geometry_msgs::PoseArray Planner::getSinglePath()
+    {
+        updateTF();
+
+        auto gap_set = gapManipulate();
+        
+        std::vector<geometry_msgs::PoseArray> traj_set, virtual_traj_set;
+        
+        auto score_set = initialTrajGen(gap_set, traj_set, virtual_traj_set);
+
+        geometry_msgs::PoseArray chosen_virtual_traj_set;
+        auto picked_traj = pickTraj(traj_set, score_set, virtual_traj_set, chosen_virtual_traj_set);
+        virtual_orient_traj_pub.publish(chosen_virtual_traj_set);
+
+        setCurrentTraj(picked_traj);
+
+        pubPickedTraj(picked_traj);
+
+        return picked_traj;
+    }
+
+    void Planner::pubPickedTraj(geometry_msgs::PoseArray picked_traj)
+    {
+        trajectory_pub.publish(picked_traj);
+    }
+
+    geometry_msgs::PoseArray Planner::getLocalPath(geometry_msgs::PoseArray input_path)
+    {
+        return gapTrajSyn->transformBackTrajectory(input_path, odom2rbt);
+    }
+
+    bool Planner::reachedTrajEnd()
+    {
+        auto curr_traj = getCurrentTraj();
+        if (curr_traj.poses.size() == 0) {
+            return true;
+        } 
+
+        // Both Args are in Odom frame
+        auto curr_rbt = gapTrajSyn->transformBackTrajectory(curr_traj, odom2rbt);
+        curr_rbt.header.frame_id = cfg.robot_frame_id;
+
+        int start_position = egoTrajPosition(curr_rbt);
+        geometry_msgs::PoseArray reduced_curr_rbt = curr_rbt;
+        reduced_curr_rbt.poses = std::vector<geometry_msgs::Pose>(curr_rbt.poses.begin() + start_position, curr_rbt.poses.end());
+        if (reduced_curr_rbt.poses.size() < 5) {
+            return true;
+        }
+        
+        return false;
     }
 
     bool Planner::recordAndCheckVel(geometry_msgs::Twist cmd_vel) {
