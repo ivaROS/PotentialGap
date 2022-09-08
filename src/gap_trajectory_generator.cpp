@@ -90,7 +90,7 @@ namespace potential_gap{
         float goal_x = selectedGap.goal.x;
         float goal_y = selectedGap.goal.y;
 
-        ROS_INFO_STREAM(goal_x << " " << goal_y << " " << selectedGap.goal.goalwithin);
+        // ROS_INFO_STREAM(goal_x << " " << goal_y << " " << selectedGap.goal.goalwithin);
 
         // Check if goal is in the middle
         double ang_l = std::atan2(y1, x1);
@@ -153,7 +153,7 @@ namespace potential_gap{
 
             success = true;
 
-            ROS_INFO_STREAM("Goal is within circle.");
+            ROS_DEBUG_STREAM("Goal is within circle.");
             return success;
         }
 
@@ -209,7 +209,7 @@ namespace potential_gap{
                     Eigen::Vector2f l_new = l_used_vec + robot_geo_thresh_dist * l_normal_vec / l_normal_vec.norm();
                     Eigen::Vector2f r_new = r_used_vec + robot_geo_thresh_dist * r_normal_vec / r_normal_vec.norm();
 
-                    ROS_INFO_STREAM("Within 1: " << cp[0] << " " << cp[1] << " " << l_used_vec[0] << " " << l_used_vec[1] << " " << l_new[0] << " " << l_new[1] << " " << r_used_vec[0] << " " << r_used_vec[1] << " " << r_new[0] << " " << r_new[1]);
+                    ROS_DEBUG_STREAM("Within 1: " << cp[0] << " " << cp[1] << " " << l_used_vec[0] << " " << l_used_vec[1] << " " << l_new[0] << " " << l_new[1] << " " << r_used_vec[0] << " " << r_used_vec[1] << " " << r_new[0] << " " << r_new[1]);
 
 
                     // if(!isLeftofLine(cp, l_new_vec, r_new_vec))
@@ -299,7 +299,7 @@ namespace potential_gap{
 
                                 Eigen::Vector2f r_new = r_used_vec + robot_geo_thresh_dist * r_normal_vec / r_normal_vec.norm();
 
-                                ROS_INFO_STREAM("Within 2 l side: " << cp[0] << " " << cp[1] << " " << r_used_vec[0] << " " << r_used_vec[1] << " " << r_new[0] << " " << r_new[1]);
+                                ROS_DEBUG_STREAM("Within 2 l side: " << cp[0] << " " << cp[1] << " " << r_used_vec[0] << " " << r_used_vec[1] << " " << r_new[0] << " " << r_new[1]);
 
                                 // if(!isLeftofLine(origin, cp, r_new_vec))
                                 // if(!isLargerAngle(cp_r_vec_rot, Eigen::Vector2f(1,0)))
@@ -359,7 +359,7 @@ namespace potential_gap{
 
                                 Eigen::Vector2f l_new = l_used_vec + robot_geo_thresh_dist * l_normal_vec / l_normal_vec.norm();
 
-                                ROS_INFO_STREAM("Within 2 r side: " << cp[0] << " " << cp[1] << " " << l_used_vec[0] << " " << l_used_vec[1] << " " << l_new[0] << " " << l_new[1]);
+                                ROS_DEBUG_STREAM("Within 2 r side: " << cp[0] << " " << cp[1] << " " << l_used_vec[0] << " " << l_used_vec[1] << " " << l_new[0] << " " << l_new[1]);
 
                                 // if(isLeftofLine(origin, cp, l_new_vec))
                                 // if(isLargerAngle(cp_l_vec_rot, Eigen::Vector2f(1,0)))
@@ -445,7 +445,7 @@ namespace potential_gap{
                 Eigen::Vector2f l_new = l_used_vec + robot_geo_thresh_dist * l_normal_vec / l_normal_vec.norm();
                 Eigen::Vector2f r_new = r_used_vec + robot_geo_thresh_dist * r_normal_vec / r_normal_vec.norm();
 
-                ROS_INFO_STREAM("Within 1 larger: " << cp[0] << " " << cp[1] << " " << l_used_vec[0] << " " << l_used_vec[1] << " " << l_new[0] << " " << l_new[1] << " " << r_used_vec[0] << " " << r_used_vec[1] << " " << r_new[0] << " " << r_new[1]);
+                ROS_DEBUG_STREAM("Within 1 larger: " << cp[0] << " " << cp[1] << " " << l_used_vec[0] << " " << l_used_vec[1] << " " << l_new[0] << " " << l_new[1] << " " << r_used_vec[0] << " " << r_used_vec[1] << " " << r_new[0] << " " << r_new[1]);
 
                 // if(!isLeftofLine(cp, l_new_vec, r_new_vec))
                 // if(!isLargerAngle(cp_r_vec_rot, cp_l_vec_rot))
@@ -516,7 +516,7 @@ namespace potential_gap{
                 Eigen::Vector2f l_inter_normal_vec(-l_used[1], l_used[0]);
                 Eigen::Vector2f l_new_inter_vec = robot_geo_thresh_dist * l_inter_normal_vec / l_inter_normal_vec.norm() + l_used;
 
-                ROS_INFO_STREAM("Not within r side: " << cp[0] << " " << cp[1] << " " << chosen_inter[0] << " " << chosen_inter[1] << " " << new_inter_vec[0] << " " << new_inter_vec[1] << " " << l_used[0] << " " << l_used[1] << " " << l_new_inter_vec[0] << " " << l_new_inter_vec[1]);
+                ROS_DEBUG_STREAM("Not within r side: " << cp[0] << " " << cp[1] << " " << chosen_inter[0] << " " << chosen_inter[1] << " " << new_inter_vec[0] << " " << new_inter_vec[1] << " " << l_used[0] << " " << l_used[1] << " " << l_new_inter_vec[0] << " " << l_new_inter_vec[1]);
                 
                 // if(!isLeftofLine(cp, l_new_vec, cp + cp_new_inter_vec))
 
@@ -586,7 +586,7 @@ namespace potential_gap{
                 Eigen::Vector2f r_inter_normal_vec(r_used[1], -r_used[0]);
                 Eigen::Vector2f r_new_inter_vec = robot_geo_thresh_dist * r_inter_normal_vec / r_inter_normal_vec.norm() + r_used;
 
-                ROS_INFO_STREAM("Not within l side: " << cp[0] << " " << cp[1] << " " << chosen_inter[0] << " " << chosen_inter[1] << " " << new_inter_vec[0] << " " << new_inter_vec[1] << " " << r_used[0] << " " << r_used[1] << " " << r_new_inter_vec[0] << " " << r_new_inter_vec[1]);
+                ROS_DEBUG_STREAM("Not within l side: " << cp[0] << " " << cp[1] << " " << chosen_inter[0] << " " << chosen_inter[1] << " " << new_inter_vec[0] << " " << new_inter_vec[1] << " " << r_used[0] << " " << r_used[1] << " " << r_new_inter_vec[0] << " " << r_new_inter_vec[1]);
                 // if(!isLeftofLine(cp, cp + cp_new_inter_vec, r_new_vec))
                 // Get intersection point p1 = (0, 0), p2 = r_new_inter_vec, p3 = cp, p4 = new_inter_vec
                 float denominator = (0. - r_new_inter_vec[0]) * (cp[1] - new_inter_vec[1]) - (0. - r_new_inter_vec[1]) * (cp[0] - new_inter_vec[0]);
@@ -675,14 +675,81 @@ namespace potential_gap{
         }
         else
         {
-            for(float t = 0; t <= 1; t+=0.02)
+            if(!cfg_->traj.bezier_interp)
             {
-                geometry_msgs::Pose pose;
-                pose.position.x = qudraBezier.valueAt(t, 0);
-                pose.position.y = qudraBezier.valueAt(t, 1);
-                posearr.poses.push_back(pose);
+                for(float t = 0; t <= 1; t+=0.02)
+                {
+                    geometry_msgs::Pose pose;
+                    pose.position.x = qudraBezier.valueAt(t, 0);
+                    pose.position.y = qudraBezier.valueAt(t, 1);
+                    posearr.poses.push_back(pose);
+                }
+                return posearr;
             }
-            return posearr;
+            else
+            {
+                double des_dist = robot_geo_proc_.getRobotAvgLinSpeed() * cfg_->traj.bezier_unit_time;
+                double entire_dist = getBezierDist(qudraBezier, 0, 1, 30);
+                int num_sampled_pts = int(round(entire_dist / des_dist));
+                num_sampled_pts = num_sampled_pts >= 2 ? num_sampled_pts : 2;
+
+                double dist_thresh = des_dist / 10;
+                double t_step = 1. / (num_sampled_pts - 1);
+                double t_min = 0;
+                for(size_t i = 0; i < num_sampled_pts; i++)
+                {
+                    double cur_t = i * t_step;
+                    double cur_dist = getBezierDist(qudraBezier, t_min, cur_t, 5);
+                    if(abs(cur_dist - des_dist) < dist_thresh)
+                    {
+                        geometry_msgs::Pose pose;
+                        pose.position.x = qudraBezier.valueAt(cur_t, 0);
+                        pose.position.y = qudraBezier.valueAt(cur_t, 1);
+                        posearr.poses.push_back(pose);
+                        t_min = cur_t;
+                    }
+                    else if(cur_dist > des_dist)
+                    {
+                        double t_prev = (i - 1) * t_step;
+                        double t_interp = (cur_t + t_prev) / 2;
+                        double interp_dist = getBezierDist(qudraBezier, t_min, t_interp, 5);
+
+                        double t_high = cur_t;
+                        double t_low = t_prev;
+                        while(abs(interp_dist - des_dist) > dist_thresh)
+                        {
+                            if(interp_dist < des_dist)
+                            {
+                                t_low = t_interp;
+                                t_interp = (t_interp + t_high) / 2;
+                            }
+                            else
+                            {
+                                t_high = t_interp;
+                                t_interp = (t_interp + t_low) / 2;
+                            }
+                            interp_dist = getBezierDist(qudraBezier, t_min, t_interp, 5);
+                            if(abs(t_interp - t_low) <= 1e-3 && abs(t_interp - t_high) <= 1e-3)
+                                break;
+                            // ROS_INFO_STREAM(t_interp << " " << t_low << " " << t_high << " " << interp_dist << " " << abs(interp_dist - des_dist) << " " << dist_thresh);
+                        }
+                        // ROS_INFO_STREAM("exit");
+                        geometry_msgs::Pose pose;
+                        pose.position.x = qudraBezier.valueAt(t_interp, 0);
+                        pose.position.y = qudraBezier.valueAt(t_interp, 1);
+                        posearr.poses.push_back(pose);
+                        t_min = t_interp;
+                    }
+                }
+                if(posearr.poses.size() < num_sampled_pts)
+                {
+                    geometry_msgs::Pose pose;
+                    pose.position.x = qudraBezier.valueAt(1, 0);
+                    pose.position.y = qudraBezier.valueAt(1, 1);
+                    posearr.poses.push_back(pose);
+                }
+                return posearr;
+            }
         }
     }
 

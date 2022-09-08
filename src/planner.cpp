@@ -44,16 +44,18 @@ namespace potential_gap
         unh.getParam("width", width);
         unh.getParam("decay_factor", decay_factor);
         unh.getParam("avg_lin_speed", avg_lin_speed);
+        unh.getParam("avg_rot_speed", avg_rot_speed);
         unh.setParam("length", length);
         unh.setParam("width", width);
         unh.setParam("decay_factor", decay_factor);
+        unh.setParam("avg_lin_speed", avg_lin_speed);
         unh.setParam("avg_rot_speed", avg_rot_speed);
 
         RobotShape robot_shape = static_cast<RobotShape>(shape_id);
         if(robot_shape == RobotShape::circle)
             width = 0;
 
-        Robot robot(robot_shape, length, width);
+        Robot robot(robot_shape, length, width, avg_lin_speed, avg_rot_speed);
 
         use_geo_storage_ = false;
         unh.getParam("use_geo_storage", use_geo_storage_);

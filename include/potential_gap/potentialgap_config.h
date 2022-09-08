@@ -94,6 +94,8 @@ namespace potential_gap {
                 double waypoint_ratio;
                 double bezier_cp_scale;
                 double robot_geo_scale;
+                bool bezier_interp;
+                double bezier_unit_time;
             } traj;
 
             struct Robot {
@@ -177,6 +179,8 @@ namespace potential_gap {
             traj.waypoint_ratio = 1.5;
             traj.bezier_cp_scale = 1;
             traj.robot_geo_scale = 1;
+            traj.bezier_interp = true;
+            traj.bezier_unit_time = 0.1;
 
             man.man_ctrl = false;
             man.man_x = 0;

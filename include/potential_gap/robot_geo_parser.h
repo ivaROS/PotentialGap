@@ -452,6 +452,11 @@ namespace potential_gap{
                 }
             }
 
+            double getRobotAvgLinSpeed()
+            {
+                return robot_.avg_lin_speed;
+            }
+
         public:
             Robot robot_;
             double decay_factor_ = 0;
