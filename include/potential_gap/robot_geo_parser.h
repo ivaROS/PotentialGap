@@ -175,6 +175,53 @@ namespace potential_gap{
                 return 2 * abs(corner_pt[1]);
             }
 
+            // double getEquivalentRL(Eigen::Vector2d& orientation_vec, Eigen::Vector2d& motion_vec)
+            // {
+            //     // Motion vec cannot be normalized
+
+            //     if(robot_.shape == RobotShape::circle)
+            //         return 2 * robot_.radius;
+
+            //     Eigen::Vector2d o_vec = orientation_vec;
+            //     Eigen::Vector2d m_vec = motion_vec;
+            //     if(o_vec.norm() != 1)
+            //         o_vec = o_vec / o_vec.norm();
+                
+            //     if(m_vec.norm() != 1)
+            //         m_vec = m_vec / m_vec.norm();
+
+            //     double m_ang = atan2(m_vec[1], m_vec[0]);
+            //     double o_ang = atan2(o_vec[1], o_vec[0]);
+            //     // double o_new_ang = o_ang - m_ang;
+            //     // Eigen::Vector2d o_new_vec(cos(o_new_ang), sin(o_new_ang));
+            //     double rot_ang = 0 - m_ang;
+            //     Eigen::Matrix2d rot;
+            //     rot << cos(rot_ang), -sin(rot_ang), sin(rot_ang), cos(rot_ang);
+            //     Eigen::Vector2d o_new_vec = rot * o_vec;
+            //     double o_new_ang = atan2(o_new_vec[1], o_new_vec[0]);
+            //     Eigen::Vector2d m_new_vec(1, 0);
+                
+            //     Eigen::Vector2d length_vec = robot_.length / 2 * o_new_vec;
+            //     Eigen::Vector2d pt_vec;
+            //     if(o_new_ang <= -M_PI / 2 || (o_new_ang > 0 && o_new_ang <= M_PI / 2)) // TODO: double check
+            //     {
+            //         pt_vec[0] = length_vec[1];
+            //         pt_vec[1] = -length_vec[0];
+            //     }
+            //     else if((o_new_ang > -M_PI / 2 && o_new_ang <= 0) || o_new_ang > M_PI / 2)
+            //     {
+            //         pt_vec[0] = -length_vec[1];
+            //         pt_vec[1] = length_vec[0];
+            //     }
+                
+            //     pt_vec = pt_vec / pt_vec.norm();
+            //     pt_vec = robot_.width / 2 * pt_vec;
+            //     Eigen::Vector2d corner_pt = motion_vec + length_vec + pt_vec;
+            //     Eigen::Vector2d opposite_corner_pt = motion_vec - length_vec - pt_vec;
+
+            //     return abs(corner_pt.norm() - opposite_corner_pt.norm());
+            // }
+
             double getEquivalentRL(Eigen::Vector2d& orientation_vec, Eigen::Vector2d& motion_vec)
             {
                 // Motion vec cannot be normalized
@@ -194,32 +241,62 @@ namespace potential_gap{
                 double o_ang = atan2(o_vec[1], o_vec[0]);
                 // double o_new_ang = o_ang - m_ang;
                 // Eigen::Vector2d o_new_vec(cos(o_new_ang), sin(o_new_ang));
-                double rot_ang = 0 - m_ang;
+                double rot_ang = 0 - o_ang;
                 Eigen::Matrix2d rot;
                 rot << cos(rot_ang), -sin(rot_ang), sin(rot_ang), cos(rot_ang);
-                Eigen::Vector2d o_new_vec = rot * o_vec;
+                Eigen::Vector2d m_new_vec = motion_vec.norm() * rot * m_vec;
+                Eigen::Vector2d o_new_vec(1, 0);
                 double o_new_ang = atan2(o_new_vec[1], o_new_vec[0]);
-                Eigen::Vector2d m_new_vec(1, 0);
+                Eigen::Vector2d o_normal(-o_new_vec[1], o_new_vec[0]);
+                Eigen::Vector2d robot_f_vec = robot_.length / 2 * o_new_vec / o_new_vec.norm();
+                Eigen::Vector2d robot_ccw_n_vec = robot_.width / 2 * o_normal / o_normal.norm();
                 
-                Eigen::Vector2d length_vec = robot_.length / 2 * o_new_vec;
-                Eigen::Vector2d pt_vec;
-                if(o_new_ang <= -M_PI / 2 || (o_new_ang > 0 && o_new_ang <= M_PI / 2)) // TODO: double check
-                {
-                    pt_vec[0] = length_vec[1];
-                    pt_vec[1] = -length_vec[0];
-                }
-                else if((o_new_ang > -M_PI / 2 && o_new_ang <= 0) || o_new_ang > M_PI / 2)
-                {
-                    pt_vec[0] = -length_vec[1];
-                    pt_vec[1] = length_vec[0];
-                }
-                
-                pt_vec = pt_vec / pt_vec.norm();
-                pt_vec = robot_.width / 2 * pt_vec;
-                Eigen::Vector2d corner_pt = motion_vec + length_vec + pt_vec;
-                Eigen::Vector2d opposite_corner_pt = motion_vec - length_vec - pt_vec;
+                // 8 points ccw from -pi angle
+                Eigen::Vector2d p1 = -robot_f_vec;
+                Eigen::Vector2d p2 = -robot_f_vec + (-robot_ccw_n_vec);
+                Eigen::Vector2d p3 = -robot_ccw_n_vec;
+                Eigen::Vector2d p4 = robot_f_vec - robot_ccw_n_vec;
+                Eigen::Vector2d p5 = robot_f_vec;
+                Eigen::Vector2d p6 = robot_f_vec + robot_ccw_n_vec;
+                Eigen::Vector2d p7 = robot_ccw_n_vec;
+                Eigen::Vector2d p8 = -robot_f_vec + robot_ccw_n_vec;
 
-                return abs(corner_pt.norm() - opposite_corner_pt.norm());
+                std::vector<Eigen::Vector2d> pt_list{p1, p2, p3, p4, p5, p6, p7, p8};
+                std::vector<double> dist;
+                for(auto pt : pt_list)
+                {
+                    Eigen::Vector2d pt_vec_global = m_new_vec + pt;
+                    dist.push_back(pt_vec_global.norm());
+                }
+
+                int sample_size = 20; // TOO SLOW
+                double res = M_PI * 2 / sample_size;
+
+                for(size_t i = 0; i < sample_size; i++)
+                {
+                    double ang = i * res - M_PI;
+                    ang = (ang <= M_PI) ? ang : M_PI;
+                    ang = (ang >= -M_PI) ? ang : -M_PI;
+
+                    Eigen::Vector2d i_vec(cos(ang), sin(ang));
+                    double er = getEquivalentR(o_new_vec, i_vec);
+
+                    Eigen::Vector2d i_bound = er * i_vec;
+
+                    dist.push_back((m_new_vec + i_bound).norm());
+                }
+
+                double max_dist = *std::max_element(dist.begin(), dist.end());
+                double min_dist = *std::min_element(dist.begin(), dist.end());
+
+                if(m_new_vec[0] > (-robot_.length / 2) && m_new_vec[0] < (robot_.length / 2) && m_new_vec[1] > (-robot_.width / 2) && m_new_vec[1] < (robot_.width / 2))
+                {
+                    return max_dist;
+                }
+                else
+                {
+                    return abs(max_dist - min_dist);
+                }
             }
 
             double getDecayEquivalentPL(Eigen::Vector2d& orientation_vec, Eigen::Vector2d& motion_vec, double dist)
@@ -278,8 +355,15 @@ namespace potential_gap{
                 Eigen::Matrix2d rot;
                 rot << cos(rot_ang), -sin(rot_ang), sin(rot_ang), cos(rot_ang);
                 Eigen::Vector2d pt_new_vec = rot * pt;
+
+                if(pt_new_vec[0] > (-robot_.length / 2) && pt_new_vec[0] < (robot_.length / 2) && pt_new_vec[1] > (-robot_.width / 2) && pt_new_vec[1] < (robot_.width / 2))
+                {
+                    return -1;
+                }
                 
-                std::vector<double> dists(sample_size);
+                Eigen::Vector2d o_new_vec(1, 0);
+
+                std::vector<double> dists;
 
                 for(size_t i = 0; i < sample_size; i++)
                 {
@@ -287,13 +371,34 @@ namespace potential_gap{
                     ang = (ang <= M_PI) ? ang : M_PI;
                     ang = (ang >= -M_PI) ? ang : -M_PI;
 
-                    Eigen::Vector2d orien_vec(1, 0);
                     Eigen::Vector2d i_vec(cos(ang), sin(ang));
-                    double dist = getEquivalentR(orien_vec, i_vec);
+                    double dist = getEquivalentR(o_new_vec, i_vec);
 
                     Eigen::Vector2d i_bound = dist * i_vec;
 
-                    dists[i] = (pt_new_vec - i_bound).norm();
+                    dists.push_back((pt_new_vec - i_bound).norm());
+                }
+
+                // 8 corner points
+                Eigen::Vector2d o_normal(-o_new_vec[1], o_new_vec[0]);
+                Eigen::Vector2d robot_f_vec = robot_.length / 2 * o_new_vec / o_new_vec.norm();
+                Eigen::Vector2d robot_ccw_n_vec = robot_.width / 2 * o_normal / o_normal.norm();
+                
+                // 8 points ccw from -pi angle
+                Eigen::Vector2d p1 = -robot_f_vec;
+                Eigen::Vector2d p2 = -robot_f_vec + (-robot_ccw_n_vec);
+                Eigen::Vector2d p3 = -robot_ccw_n_vec;
+                Eigen::Vector2d p4 = robot_f_vec - robot_ccw_n_vec;
+                Eigen::Vector2d p5 = robot_f_vec;
+                Eigen::Vector2d p6 = robot_f_vec + robot_ccw_n_vec;
+                Eigen::Vector2d p7 = robot_ccw_n_vec;
+                Eigen::Vector2d p8 = -robot_f_vec + robot_ccw_n_vec;
+
+                std::vector<Eigen::Vector2d> pt_list{p1, p2, p3, p4, p5, p6, p7, p8};
+                for(auto pt : pt_list)
+                {
+                    Eigen::Vector2d pt_vec_global = pt_new_vec - pt;
+                    dists.push_back(pt_vec_global.norm());
                 }
 
                 return *std::min_element(dists.begin(), dists.end());

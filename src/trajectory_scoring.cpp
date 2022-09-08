@@ -118,20 +118,30 @@ namespace potential_gap {
             ROS_FATAL_STREAM("Scan range incorrect scorePose");
         }
 
+        Eigen::Quaterniond q(pose.orientation.w, pose.orientation.x, pose.orientation.y, pose.orientation.z);
+        auto euler = q.toRotationMatrix().eulerAngles(0, 1, 2);
+        Eigen::Vector2d orient_vec(cos(euler[2]), sin(euler[2]));
+        Eigen::Vector2d pose_vec(pose.position.x, pose.position.y); // TODO: pose should be in robot frame
+        double pose_angle = atan2(pose_vec[1], pose_vec[0]);
+        int pose_idx = int(round((pose_angle - stored_scan.angle_min) / stored_scan.angle_increment));
+        pose_idx = pose_idx >= 0 ? pose_idx : 0;
+        pose_idx = pose_idx < stored_scan.ranges.size() ? pose_idx : (stored_scan.ranges.size() - 1);
+        float pose_ego_dist = stored_scan.ranges[pose_idx];
+        if(pose_vec.norm() >= pose_ego_dist)
+            return -std::numeric_limits<double>::infinity();
+
         for (int i = 0; i < dist.size(); i++) {
             float this_dist = stored_scan.ranges.at(i);
             this_dist = this_dist == 3 ? this_dist + cfg_->traj.rmax : this_dist;
 
             // Iterate through robot boundary
-            Eigen::Quaterniond q(pose.orientation.w, pose.orientation.x, pose.orientation.y, pose.orientation.z);
-            auto euler = q.toRotationMatrix().eulerAngles(0, 1, 2);
-            Eigen::Vector2d orient_vec(cos(euler[2]), sin(euler[2]));
+            
             double pt_ang = i * stored_scan.angle_increment - M_PI;
             pt_ang = (pt_ang >= -M_PI) ? pt_ang : -M_PI;
             pt_ang = (pt_ang <= M_PI) ? pt_ang : M_PI;
             Eigen::Vector2d pt_vec(cos(pt_ang), sin(pt_ang));
             pt_vec = this_dist * pt_vec;
-            Eigen::Vector2d pose_vec(pose.position.x, pose.position.y); // TODO: pose should be in robot frame
+            
             Eigen::Vector2d rel_pt_vec = pt_vec - pose_vec;
             double nearest_dist = robot_geo_proc_.getNearestDistance(orient_vec, rel_pt_vec);
             dist.at(i) = nearest_dist;
@@ -158,7 +168,7 @@ namespace potential_gap {
     }
 
     double TrajectoryArbiter::chapterScore(double d, double rmax_offset_val) {
-        if (d < 0) return -std::numeric_limits<double>::infinity();
+        if (d <= 0) return -std::numeric_limits<double>::infinity();
         if (d > rmax_offset_val) return 0;
         return cobs * std::exp(- w * (d));
     }

@@ -101,6 +101,69 @@ namespace potential_gap
         // ROS_INFO_STREAM("Interp er: " << interp_er << ", Interp epl: " << interp_epl << ", time: " << (double)interp_time.toNSec() << " ns");
         // ROS_INFO_STREAM("Comp er: " << er << ", Comp epl: " << epl << ", time: " << (double)comp_time.toNSec() << " ns");
         // throw;
+        
+        // Debug robot_geo_processor
+        // Eigen::Vector2d orientation_vec(1, 0);
+        // Eigen::Vector2d p1(-0.35,0);
+        // Eigen::Vector2d p2(-0.35,-0.15);
+        // Eigen::Vector2d p3(0,-0.15);
+        // Eigen::Vector2d p4(0.35,-0.15);
+        // Eigen::Vector2d p5(0.35,0);
+        // Eigen::Vector2d p6(0.35,0.15);
+        // Eigen::Vector2d p7(0,0.15);
+        // Eigen::Vector2d p8(-0.35,0.15);
+        // Eigen::Vector2d p9(0.1, 0.1);
+        // Eigen::Vector2d p10(1, 1);
+        // double vec_length = 3; // 3
+        // std::vector<Eigen::Vector2d> pt_list{vec_length*p1/p1.norm(), vec_length*p2/p2.norm(), vec_length*p3/p3.norm(), vec_length*p4/p4.norm(), vec_length*p5/p5.norm(), vec_length*p6/p6.norm(), vec_length*p7/p7.norm(), vec_length*p8/p8.norm(), p9, p10};
+
+        // // True 
+        // std::vector<double> r{p1.norm(), p2.norm(), p3.norm(), p4.norm(), p5.norm(), p6.norm(), p7.norm(), p8.norm(), sqrt(0.15*0.15*2), sqrt(0.15*0.15*2)};
+        // double alpha = 2 * atan2(0.15, 0.35);
+        // std::vector<double> el{0.3, 2*p2.norm()*sin(alpha), 0.7, 2*p2.norm()*sin(alpha), 0.3, 2*p2.norm()*sin(alpha), 0.7, 2*p2.norm()*sin(alpha), 2*p2.norm()*cos(M_PI / 4 - alpha/2), 2*p2.norm()*cos(M_PI / 4 - alpha/2)};
+        
+        
+        // double p1_min_dist = vec_length - 0.35;
+        // double p1_max_dist = sqrt(pow(vec_length + 0.35, 2) + 0.15 * 0.15);
+        // double dia = 2*p2.norm();
+        // double p3_min_dist = vec_length - 0.15;
+        // double p3_max_dist = sqrt(pow(vec_length + 0.15, 2) + 0.35 * 0.35);
+        // std::vector<double> er{p1_max_dist - p1_min_dist, dia, p3_max_dist - p3_min_dist, dia, p1_max_dist - p1_min_dist, dia, p3_max_dist - p3_min_dist, dia, sqrt(pow(0.45, 2) + pow(0.25, 2)), (p10+p6).norm() - (p10-p6).norm()};
+
+        // std::vector<double> n_dist{vec_length - 0.35, vec_length - p2.norm(), vec_length - 0.15, vec_length - p2.norm(), vec_length - 0.35, vec_length - p2.norm(), vec_length - 0.15, vec_length - p2.norm(), -1, (p10-p6).norm()};
+
+        // double rot_ang = M_PI / 2;
+        // Eigen::Matrix2d rot;
+        //         rot << cos(rot_ang), -sin(rot_ang), sin(rot_ang), cos(rot_ang);
+        // for(size_t i = 0; i < pt_list.size(); i++)
+        // {   
+        //     Eigen::Vector2d p = pt_list[i];
+        //     Eigen::Vector2d p_tmp = p;
+        //     // True values
+        //     double r_dist = r[i];
+        //     double er_p = er[i];
+        //     double el_p = el[i];
+        //     double nd = n_dist[i];
+
+        //     // Calculated values
+        //     Eigen::Vector2d o_vec = rot * orientation_vec;
+        //     Eigen::Vector2d p_vec = rot * p;
+        //     Eigen::Vector2d p_tmp_vec = rot * p_tmp;
+        //     double r_c_dist = robot_geo_proc_.getEquivalentR(o_vec, p_vec);
+        //     ros::WallTime start_time = ros::WallTime::now();
+        //     double er_c_p = robot_geo_proc_.getEquivalentRL(o_vec, p_tmp_vec);
+        //     ros::WallDuration d = ros::WallTime::now() - start_time;
+        //     ROS_INFO_STREAM("RL time: " << (float) d.toNSec() / 1000 << "mu sec");
+        //     double el_c_p = robot_geo_proc_.getEquivalentPL(o_vec, p_vec);
+        //     ros::WallTime start_n_time = ros::WallTime::now();
+        //     double n_dist_c = robot_geo_proc_.getNearestDistance(o_vec, p_tmp_vec);
+        //     ros::WallDuration dn = ros::WallTime::now() - start_n_time;
+        //     ROS_INFO_STREAM("Nearest time: " << (float) dn.toNSec() / 1000 << "mu sec");
+
+        //     ROS_INFO_STREAM("True values: " << r_dist << " " << er_p << " " << el_p << " " << nd << "; Calculated values: " << r_c_dist << " " << er_c_p << " " << el_c_p << " " << n_dist_c);
+        //     ROS_INFO_STREAM("Equals: " << (r_dist - r_c_dist) << " " << (er_p - er_c_p) << " " << (el_p - el_c_p) << " " << (nd - n_dist_c));
+        // }
+        // throw;
 
         // Visualization Setup
         // Fix this later
