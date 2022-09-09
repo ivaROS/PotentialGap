@@ -316,7 +316,8 @@ namespace potential_gap
             idx = idx < msg->ranges.size() ? idx : (msg->ranges.size() - 1);
             idx = idx >= 0 ? idx : 0;
 
-            transformed_laser.ranges[idx] = transformed_range;
+            if(transformed_range < transformed_laser.ranges[idx])
+                transformed_laser.ranges[idx] = transformed_range;
         }
 
         return boost::make_shared<sensor_msgs::LaserScan const>(transformed_laser);
