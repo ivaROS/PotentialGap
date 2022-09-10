@@ -30,7 +30,7 @@ namespace potential_gap{
                 if(robot_width != 0)
                     throw std::runtime_error("Circular robot doesn't have width.");
 
-                radius = robot_length;
+                radius = robot_length / 2;
                 avg_lin_speed = robot_avg_lin_speed;
                 avg_rot_speed = robot_avg_rot_speed;
                 break;
@@ -50,7 +50,7 @@ namespace potential_gap{
                 if(robot_width != 0)
                     throw std::runtime_error("Circular robot doesn't have width.");
 
-                radius = robot_length;
+                radius = robot_length / 2;
                 avg_lin_speed = robot_avg_lin_speed;
                 avg_rot_speed = robot_avg_rot_speed;
                 break;
