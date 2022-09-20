@@ -269,7 +269,7 @@ namespace potential_gap{
                     dist.push_back(pt_vec_global.norm());
                 }
 
-                int sample_size = 20; // TOO SLOW
+                int sample_size = 0; // TOO SLOW
                 double res = M_PI * 2 / sample_size;
 
                 for(size_t i = 0; i < sample_size; i++)
@@ -347,7 +347,7 @@ namespace potential_gap{
             {
                 // The pt is the relative vector from robot origin.
 
-                int sample_size = 20; // TOO SLOW
+                int sample_size = 0; // TOO SLOW
                 double res = M_PI * 2 / sample_size;
 
                 double o_ang = atan2(orientation_vec[1], orientation_vec[0]);

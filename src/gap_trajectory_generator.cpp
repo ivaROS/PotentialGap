@@ -102,7 +102,7 @@ namespace potential_gap{
         Eigen::Vector2f l_vec(x1, y1);
         Eigen::Vector2f r_vec(x2, y2);
         float circ_r = selectedGap.getMinSafeDist();
-        assert(circ_r <= l_vec.norm() && circ_r <= r_vec.norm());
+        // assert(circ_r <= l_vec.norm() && circ_r <= r_vec.norm());
         Eigen::Vector2f l_inter = circ_r * l_vec / l_vec.norm();
         Eigen::Vector2f r_inter = circ_r * r_vec / r_vec.norm();
         Eigen::Vector2f goal_vec(goal_x, goal_y);

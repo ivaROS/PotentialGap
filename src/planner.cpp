@@ -946,15 +946,29 @@ namespace potential_gap
     {
         updateTF();
 
+        ros::WallTime start_time = ros::WallTime::now();
         auto gap_set = gapManipulate();
+        ros::WallTime end_gap = ros::WallTime::now();
+        ros::WallDuration gap_d = end_gap - start_time;
         
         std::vector<geometry_msgs::PoseArray> traj_set, virtual_traj_set;
         
         auto score_set = initialTrajGen(gap_set, traj_set, virtual_traj_set);
 
+        ros::WallTime end_traj = ros::WallTime::now();
+        ros::WallDuration traj_d = end_traj - end_gap;
+
         geometry_msgs::PoseArray chosen_virtual_traj_set;
         auto picked_traj = pickTraj(traj_set, score_set, virtual_traj_set, chosen_virtual_traj_set);
         virtual_orient_traj_pub.publish(chosen_virtual_traj_set);
+        ros::WallTime end_pick = ros::WallTime::now();
+        ros::WallDuration pick_d = end_pick - end_traj;
+
+        ROS_INFO_STREAM("gap time: " << float(gap_d.toNSec()) / 1000000 << " ms");
+        ROS_INFO_STREAM("traj time: " << float(traj_d.toNSec()) / 1000000 << " ms");
+        ROS_INFO_STREAM("pick time: " << float(pick_d.toNSec()) / 1000000 << " ms");
+
+
 
         setCurrentTraj(picked_traj);
 
