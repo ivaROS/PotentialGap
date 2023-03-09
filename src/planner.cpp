@@ -600,6 +600,49 @@ namespace potential_gap
         return final_traj;
     }
 
+    geometry_msgs::PoseArray Planner::getSinglePath()
+    {
+        updateTF();
+
+        auto gap_set = gapManipulate();
+
+        std::vector<geometry_msgs::PoseArray> traj_set;
+
+        auto score_set = initialTrajGen(gap_set, traj_set);
+
+        auto picked_traj = pickTraj(traj_set, score_set);
+
+        setCurrentTraj(picked_traj);
+
+        return picked_traj;
+    }
+
+    geometry_msgs::PoseArray Planner::getLocalPath(geometry_msgs::PoseArray input_path)
+    {
+        return gapTrajSyn->transformBackTrajectory(input_path, odom2rbt);
+    }
+
+    bool Planner::reachedTrajEnd()
+    {
+        auto curr_traj = getCurrentTraj();
+        if (curr_traj.poses.size() == 0) {
+            return true;
+        } 
+
+        // Both Args are in Odom frame
+        auto curr_rbt = gapTrajSyn->transformBackTrajectory(curr_traj, odom2rbt);
+        curr_rbt.header.frame_id = cfg.robot_frame_id;
+
+        int start_position = egoTrajPosition(curr_rbt);
+        geometry_msgs::PoseArray reduced_curr_rbt = curr_rbt;
+        reduced_curr_rbt.poses = std::vector<geometry_msgs::Pose>(curr_rbt.poses.begin() + start_position, curr_rbt.poses.end());
+        if (reduced_curr_rbt.poses.size() < 5) {
+            return true;
+        }
+
+        return false;
+    }
+
     bool Planner::recordAndCheckVel(geometry_msgs::Twist cmd_vel) {
         double val = std::abs(cmd_vel.linear.x) + std::abs(cmd_vel.linear.y) + std::abs(cmd_vel.angular.z);
         log_vel_comp.push_back(val);

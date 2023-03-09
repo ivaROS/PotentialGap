@@ -302,7 +302,13 @@ namespace potential_gap
          * Conglomeration of getting a plan Trajectory
          * @return the trajectory
          */
-        geometry_msgs::PoseArray getPlanTrajectory();        
+        geometry_msgs::PoseArray getPlanTrajectory();      
+
+        geometry_msgs::PoseArray getSinglePath();
+
+        geometry_msgs::PoseArray getLocalPath(geometry_msgs::PoseArray input_path);
+
+        bool reachedTrajEnd();
 
         /**
          * Gets the current position along the currently executing Trajectory
