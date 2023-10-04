@@ -1,0 +1,8 @@
+<library path="lib/libpotential_gap_ros">
+
+  <class name="potential_gap/PotentialGapPlannerROS" type="potential_gap::PotentialGapPlannerROS" base_class_type="trajectory_based_local_planner::TrajectoryBaseLocalPlanner">
+    <description>This is a Potential Gap traj follow plugin.</description>
+  </class>
+
+</library>
+

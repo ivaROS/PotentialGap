@@ -1,0 +1,25 @@
+PotentialGapPlanner:
+    min_resoln: 1
+    gap_diff: 0.1
+    global_plan_lookup_increment: 30
+    goal_tolerance: 0.4
+    global_plan_change_tolerance: 0.1
+    follow_the_gap_visparsing: True
+    close_gap_visparsing: True
+
+    epsilon2: 0.25
+    epsilon1: 0.25
+
+    niGen_s: True
+    config_sanity_val: 100
+    ctrl_ahead_pose: 1
+    reduction_threshold: 1.5708
+    max_idx_diff: 128
+    feasi_inflated: True
+    projection_inflated: True
+    v_lin_x_const: 0.2
+    v_lin_y_const: 0.0
+    projection_inflated: False
+    planning_inflated: True
+    fig_gen: False
+    k_po: 0.3

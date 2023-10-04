@@ -6,14 +6,14 @@ import time
 import signal
 
 # world_name = "campus"
-world_name = ['fourth_floor'] #'campus'
-# world_name = ['dense']
+# world_name = ['campus', 'fourth_floor', 'dense']
+world_name = ['dense']
 map_save_path = "/home/shiyu/potential_gap_ws/src/potential_gap/maps/"
 
 launch_file_path = "/home/shiyu/potential_gap_ws/src/navigation_test/configs/launch/"
 
-min_seed = 77
-max_seed = 100
+min_seed = 2
+max_seed = 50
 
 for wv, world in enumerate(world_name):
 	if world is 'dense':
@@ -26,7 +26,7 @@ for wv, world in enumerate(world_name):
 	else:
 		launch_file_name = 'gazebo_' + world + '_world.launch'
 
-	for seed in range(min_seed, max_seed):
+	for seed in [27,28,30,35]:
 		print 'Generate ' + world + ' map with seed ' + str(seed)
 		# gazebo environment
 		cmd_gazebo = str('roslaunch ' + launch_file_path + launch_file_name + ' gui:=false')

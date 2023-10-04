@@ -1,4 +1,4 @@
-PotentialGapPlanner:
+PotentialGapPlannerROS:
     min_resoln: 1
     gap_diff: 0.1
     global_plan_lookup_increment: 30

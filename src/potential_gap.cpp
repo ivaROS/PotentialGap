@@ -22,7 +22,10 @@ PLUGINLIB_EXPORT_CLASS(potential_gap::PotentialGapPlanner, nav_core::BaseLocalPl
 
 namespace potential_gap 
 {
-    PotentialGapPlanner::PotentialGapPlanner(){}
+    PotentialGapPlanner::PotentialGapPlanner()
+    {
+        
+    }
 
     PotentialGapPlanner::~PotentialGapPlanner()
     {
@@ -39,7 +42,7 @@ namespace potential_gap
         return planner.setGoal(plan);
     }
 
-    void PotentialGapPlanner::initialize(std::string name, tf::TransformListener* tf, costmap_2d::Costmap2DROS* costmap_ros)
+    void PotentialGapPlanner::initialize(std::string name, tf2_ros::Buffer* tf, costmap_2d::Costmap2DROS* costmap_ros)
     {
         planner_name = name;
         ros::NodeHandle pnh("~/" + planner_name);
@@ -50,6 +53,8 @@ namespace potential_gap
         pose_sub = pnh.subscribe("/odom",10, &Planner::poseCB, &planner);
         planner.initialize(pnh);
         initialized = true;
+
+        planner.pf_local_frame_enable_ = pf_local_frame_enable_;
 
         // Setup dynamic reconfigure
         dynamic_recfg_server = boost::make_shared<dynamic_reconfigure::Server <potential_gap::pgConfig> > (pnh);
@@ -64,6 +69,12 @@ namespace potential_gap
             ros::NodeHandle pnh("~/" + planner_name);
             planner.initialize(pnh);
             ROS_WARN_STREAM("computerVelocity called before initializing planner");
+        }
+
+        if(planner.ccEnabled() && !planner.getCCWrapper()->isReady())
+        {
+            ROS_ERROR("CC NOT READY");
+            return false;
         }
 
         auto final_traj = planner.getPlanTrajectory();

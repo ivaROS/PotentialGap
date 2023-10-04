@@ -35,6 +35,8 @@ namespace potential_gap {
                 bool radial_extend;
                 bool axial_convert;
                 double rot_ratio;
+                bool inflated_gap;
+                double inflated_gap_scale;
             } gap_manip;
 
             struct ControlParams {
@@ -47,6 +49,7 @@ namespace potential_gap {
                 int ctrl_ahead_pose;
                 double vx_absmax;
                 double vy_absmax;
+                double ang_absmax;
             } control;
             
             struct ProjectionParam {
@@ -71,6 +74,7 @@ namespace potential_gap {
                 bool projection_operator;
                 bool niGen_s;
                 bool far_feasible;
+                bool use_bezier;
                 int num_feasi_check;
                 int halt_size;
             } planning;
@@ -90,7 +94,12 @@ namespace potential_gap {
                 double w;
                 double inf_ratio;
                 double terminal_weight;
+                double orient_weight;
                 double waypoint_ratio;
+                double bezier_cp_scale;
+                double robot_geo_scale;
+                bool bezier_interp;
+                double bezier_unit_time;
             } traj;
 
             struct Robot {
@@ -127,6 +136,8 @@ namespace potential_gap {
             gap_manip.reduction_target = M_PI / 4;
             gap_manip.radial_extend = true;
             gap_manip.axial_convert = true;
+            gap_manip.inflated_gap = true;
+            gap_manip.inflated_gap_scale = 1;
             
             control.k_drive_x = 3.5;
             control.k_drive_y = 3.5;
@@ -137,6 +148,7 @@ namespace potential_gap {
             control.ctrl_ahead_pose = 2;
             control.vx_absmax = 0.5;
             control.vy_absmax = 0.5;
+            control.ang_absmax = 0.2;
 
             projection.k_po = 0.8;
             projection.k_po_turn = 1;
@@ -156,6 +168,7 @@ namespace potential_gap {
             planning.niGen_s = false;
             planning.num_feasi_check = 10;
             planning.far_feasible = false;
+            planning.use_bezier = true;
             planning.halt_size = 5;
 
             goal.goal_tolerance = 0.2;
@@ -170,7 +183,12 @@ namespace potential_gap {
             traj.w = 3;
             traj.inf_ratio = 1.2;
             traj.terminal_weight = 10;
+            traj.orient_weight = 1;
             traj.waypoint_ratio = 1.5;
+            traj.bezier_cp_scale = 1;
+            traj.robot_geo_scale = 1;
+            traj.bezier_interp = true;
+            traj.bezier_unit_time = 0.1;
 
             man.man_ctrl = false;
             man.man_x = 0;

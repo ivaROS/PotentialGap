@@ -39,7 +39,7 @@ namespace potential_gap {
 
             bool setPlan(const std::vector<geometry_msgs::PoseStamped> & plan);
 
-            void initialize(std::string name, tf::TransformListener* tf, costmap_2d::Costmap2DROS* costmap_ros);
+            void initialize(std::string name, tf2_ros::Buffer* tf, costmap_2d::Costmap2DROS* costmap_ros);
 
             void reset();
 
@@ -55,6 +55,8 @@ namespace potential_gap {
             ros::Subscriber feasi_laser_sub;
 
             bool initialized = false;
+
+            bool pf_local_frame_enable_ = false;
 
             boost::shared_ptr<dynamic_reconfigure::Server<potential_gap::pgConfig> > dynamic_recfg_server;
             dynamic_reconfigure::Server<potential_gap::pgConfig>::CallbackType f;

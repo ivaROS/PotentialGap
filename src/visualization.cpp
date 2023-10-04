@@ -16,6 +16,8 @@ namespace potential_gap{
         std::vector<std_msgs::ColorRGBA> raw_axial;
         std::vector<std_msgs::ColorRGBA> fin_radial;
         std::vector<std_msgs::ColorRGBA> fin_axial;
+        std::vector<std_msgs::ColorRGBA> trans_radial;
+        std::vector<std_msgs::ColorRGBA> trans_axial;
         std::vector<std_msgs::ColorRGBA> extent;
         std::vector<std_msgs::ColorRGBA> agc;
 
@@ -42,6 +44,17 @@ namespace potential_gap{
         std_color.b = 0.9;
         fin_axial.push_back(std_color);
         fin_axial.push_back(std_color);
+        std_color.a = 1;
+        std_color.r = 1;
+        std_color.g = 0.9;
+        std_color.b = 0.5;
+        trans_radial.push_back(std_color);
+        trans_radial.push_back(std_color);
+        std_color.r = 0.4;
+        std_color.g = 0.3;
+        std_color.b = 0.9;
+        trans_axial.push_back(std_color);
+        trans_axial.push_back(std_color);
         std_color.r = 0;
         std_color.g = 1;
         std_color.b = 0;
@@ -56,6 +69,8 @@ namespace potential_gap{
         colormap.insert(std::pair<std::string, std::vector<std_msgs::ColorRGBA>>("raw_radial", raw_radial));
         colormap.insert(std::pair<std::string, std::vector<std_msgs::ColorRGBA>>("fin_radial", fin_radial));
         colormap.insert(std::pair<std::string, std::vector<std_msgs::ColorRGBA>>("fin_axial", fin_axial));
+        colormap.insert(std::pair<std::string, std::vector<std_msgs::ColorRGBA>>("trans_radial", trans_radial));
+        colormap.insert(std::pair<std::string, std::vector<std_msgs::ColorRGBA>>("trans_axial", trans_axial));
         colormap.insert(std::pair<std::string, std::vector<std_msgs::ColorRGBA>>("fin_extent", extent));
         colormap.insert(std::pair<std::string, std::vector<std_msgs::ColorRGBA>>("fin_agc", agc));
 
@@ -82,6 +97,7 @@ namespace potential_gap{
         this_marker.ns = ns;
         this_marker.type = visualization_msgs::Marker::LINE_STRIP;
         this_marker.action = visualization_msgs::Marker::ADD;
+        this_marker.pose.orientation.w = 1;
 
         std::string local_ns = ns;
         if (g.isAxial()) {
@@ -97,10 +113,10 @@ namespace potential_gap{
         }
 
         this_marker.colors = color_value->second;
-        double thickness = cfg_->gap_viz.fig_gen ? 0.05 : 0.01;
-        this_marker.scale.x = thickness;
-        this_marker.scale.y = 0.1;
-        this_marker.scale.z = 0.1;
+        double thickness = cfg_->gap_viz.fig_gen ? 0.2 : 0.01;
+        this_marker.scale.x = 0.05;
+        this_marker.scale.y = 0.05;
+        this_marker.scale.z = 0.05;
         bool finNamespace = (ns.compare("fin") == 0);
 
         geometry_msgs::Point linel;
@@ -198,6 +214,7 @@ namespace potential_gap{
         this_marker.ns = ns;
         this_marker.type = visualization_msgs::Marker::LINE_STRIP;
         this_marker.action = visualization_msgs::Marker::ADD;
+        this_marker.pose.orientation.w = 1;
 
         auto color_value = colormap.find(ns);
         if (color_value == colormap.end()) {
@@ -345,7 +362,7 @@ namespace potential_gap{
         all_traj_viz = nh.advertise<visualization_msgs::MarkerArray>("all_traj_vis", 1000);
     }
 
-    void TrajectoryVisualizer::globalPlanRbtFrame(const std::vector<geometry_msgs::PoseStamped> & plan) {
+    void TrajectoryVisualizer::rawGlobalPlan(const std::vector<geometry_msgs::PoseStamped> & plan) {
         if (!cfg_->gap_viz.debug_viz) return;
         if (plan.size() < 1) {
             ROS_WARN_STREAM("Goal Selector Returned Trajectory Size " << plan.size() << " < 1");
@@ -460,8 +477,10 @@ namespace potential_gap{
         lg_marker.ns = "allTraj";
         lg_marker.type = visualization_msgs::Marker::ARROW;
         lg_marker.action = visualization_msgs::Marker::ADD;
+        lg_marker.pose.orientation.w = 1;
         lg_marker.scale.x = 0.1;
-        lg_marker.scale.y = cfg_->gap_viz.fig_gen ? 0.02 : 0.01;// 0.01;
+        lg_marker.scale.y = cfg_->gap_viz.fig_gen ? 0.2 : 0.01;// 0.01;
+        lg_marker.scale.y = 0.05;
         lg_marker.scale.z = 0.1;
         lg_marker.color.a = 1;
         lg_marker.color.r = 0.5;
@@ -531,9 +550,9 @@ namespace potential_gap{
         lg_marker.pose.position.y = g.goal.y;
         lg_marker.pose.position.z = 0.5;
         lg_marker.pose.orientation.w = 1;
-        lg_marker.scale.x = 0.1;
-        lg_marker.scale.y = 0.1;
-        lg_marker.scale.z = 0.1;
+        lg_marker.scale.x = 0.2;
+        lg_marker.scale.y = 0.2;
+        lg_marker.scale.z = 0.2;
         lg_marker.color = gapwp_color;
         lg_marker.lifetime = ros::Duration(0.5);
         vis_arr.markers.push_back(lg_marker);
@@ -550,4 +569,40 @@ namespace potential_gap{
         return;
     }
 
+    BezierVisualizer::BezierVisualizer(ros::NodeHandle& nh, const potential_gap::PotentialGapConfig& cfg)
+    {
+        cfg_ = &cfg;
+        cp_pub = nh.advertise<visualization_msgs::MarkerArray>("bezier_cps", 1000);
+    }
+
+    void BezierVisualizer::drawBezierCps(const std::vector<std::vector<Eigen::Vector2f>>&)
+    {
+
+    }
+
+    UnionGapVisualizer::UnionGapVisualizer(ros::NodeHandle& nh, const potential_gap::PotentialGapConfig& cfg)
+    {
+        initialize(nh, cfg);
+    }
+
+    void UnionGapVisualizer::initialize(ros::NodeHandle& nh, const potential_gap::PotentialGapConfig& cfg)
+    {
+        cfg_ = &cfg;
+        union_gap_pub = nh.advertise<visualization_msgs::MarkerArray>("pg_union_gap", 1000);
+    }
+
+    void UnionGapVisualizer::drawUnionGap(visualization_msgs::MarkerArray &, potential_gap::Gap g)
+    {
+
+    }
+
+    void UnionGapVisualizer::drawUnionGaps(std::vector<potential_gap::Gap> g)
+    {
+        if (!cfg_->gap_viz.debug_viz) return;
+        visualization_msgs::MarkerArray vis_arr;
+        for (auto & gap : g) {
+            drawUnionGap(vis_arr, gap);
+        }
+        union_gap_pub.publish(vis_arr);
+    }
 }

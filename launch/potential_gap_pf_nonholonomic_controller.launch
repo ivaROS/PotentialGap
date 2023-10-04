@@ -1,0 +1,90 @@
+<launch>
+  <arg name="global_planning_freq" default="$(optenv GM_PARAM_GLOBAL_PLANNING_FREQ 0)"/>
+  <arg name="controller_freq" default="$(optenv GM_PARAM_CONTROLLER_FREQ 5)"/>
+  <arg name="use_recovery_behaviors" default="true"/>
+  
+  <arg name="vel_topic" default="/robot0/cmd_vel"/>
+  <arg name="holonomic" default="false"/>
+  <arg name="projection_operator" default="true"/>
+
+  <!--<include file="$(find turtlebot_navigation)/launch/includes/velocity_smoother.launch.xml"/>-->
+  
+  <arg name="egocircle_mat" default="/egocircle_mat"/>
+  <arg name="egocircle_info" default="/egocircle_info"/>
+
+  <node name="egocircle_node" pkg="egocircle" type="ego_circle">
+      <param name="base_frame_id" value="robot0"/>
+      <param name="odom_frame_id" value="map_static"/>
+      <remap from="/scan" to="/robot0/laser_0"/>
+  </node>
+  
+  <node pkg="tf" type="static_transform_publisher" name="laser_optical_trans" args="0 0 0 -0.500, 0.500, -0.500, 0.500 robot0_laser_0 robot0_laser_optical_0 100" />
+  
+  <node name="egocircle_to_mat" pkg="potential_gap_collision_checking" type="egocircle_to_mat">
+      <param name="egocircle_mat_width" value="512"/>
+      <param name="sensor_optical_frame" value="robot0_laser_optical_0"/>
+  </node>
+
+  <node pkg="potential_gap_path_following" type="potential_gap_egocircle_path_follower" respawn="false" name="potential_gap_egocircle_path_follower" output="screen" clear_params="true" >
+      <rosparam file="$(find potential_gap)/config/common_costmap_params.yaml" command="load" ns="global_costmap"/>
+      <rosparam file="$(find potential_gap)/config/common_costmap_params.yaml" command="load" ns="local_costmap"/>
+      <rosparam file="$(find potential_gap)/config/local_costmap_params.yaml" command="load"/>
+      <rosparam file="$(find potential_gap)/config/global_costmap_params.yaml" command="load"/>
+    
+      <rosparam file="$(find nav_configs)/config/move_base_rb_params.yaml" command="load"/>
+      <rosparam file="$(find nav_configs)/config/global_planner_params.yaml" command="load" ns="GlobalPlanner"/>
+
+      <param name="recovery_behavior_enabled" value="false" unless="$(arg use_recovery_behaviors)"/>
+
+      <param name="controller_frequency" value="$(arg controller_freq)" />
+      <param name="planner_frequency" value="$(arg global_planning_freq)"/>
+
+      <remap from="cmd_vel" to="$(arg vel_topic)"/>
+      <remap from="cmd_vel_mux/input/navi" to="$(arg vel_topic)"/>
+
+      <param name="simulated_slow_global_plan_time" value="0" />
+
+      <param name="global_following_enabled" value="false" />
+      
+      <param name="collision_checking_enabled" value="true" />
+
+      <param name="ni_enabled" value="false" />
+      
+      <!-- Collision checking -->
+      <param name="min_num_tc" value="10" />
+      <param name="min_num_te" value="7" />
+
+      <param name="pg_egocircle_cc_wrapper/egocircle_topic" value="$(arg egocircle_mat)"/>
+      <param name="pg_egocircle_cc_wrapper/egocircle_info_topic" value="$(arg egocircle_info)"/>
+      <param name="pg_egocircle_cc_wrapper/odom_frame_id" value="map_static"/>
+      <param name="pg_egocircle_cc_wrapper/base_frame_id" value="robot0"/>
+      <param name="pg_egocircle_cc_wrapper/fixed_frame_id" value="map_static"/>
+
+      <!--Goal reached threshold-->
+      <param name="final_dist_thresh" value="0.5" />
+
+      <!-- Approach-specific parameters/remappings -->
+      <param name="base_local_planner" value="potential_gap/PotentialGapPlannerROS" />
+      
+      <!-- Approach-specific parameters/remappings/etc -->
+      <rosparam file="$(find potential_gap)/config/potentialgap_local_planner_pf_params.yaml" command="load"/>
+      
+      <param name="PotentialGapPlannerROS/map_frame_id" value="known_map"/>
+      <param name="PotentialGapPlannerROS/odom_frame_id" value="map_static"/>
+      <param name="PotentialGapPlannerROS/robot_frame_id" value="robot0"/>
+      <param name="PotentialGapPlannerROS/sensor_frame_id" value="robot0_laser_0"/>
+
+      <!-- Params for the trajectory controller-->
+      <param name="trajectory_controller/holonomic" value="$(arg holonomic)"/>
+      <param name="trajectory_controller/projection_operator" value="$(arg projection_operator)"/>
+      <param name="trajectory_controller/sensor_frame_id" value="robot0_laser_0"/>
+      
+      <remap from="/odom" to="/robot0/odom"/>
+
+      <rosparam file="$(find potential_gap_trajectory_controller)/configs/potential_gap_trajectory_controller_params.yaml" command="load" ns="trajectory_controller"/>
+
+  </node>
+
+  <!--launch-prefix="xterm -e gdb -ex run - -args"-->
+
+</launch>

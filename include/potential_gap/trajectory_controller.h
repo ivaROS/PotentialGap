@@ -15,6 +15,8 @@
 #include <tf/tf.h>
 #include <potential_gap/gap.h>
 #include "potential_gap/TrajPlan.h"
+#include <traj_generator.h>
+#include <turtlebot_trajectory_generator/near_identity.h>
 #include <potential_gap/gap_trajectory_generator.h>
 #include <visualization_msgs/Marker.h>
 #include <tf2/LinearMath/Quaternion.h>
@@ -29,6 +31,8 @@ namespace potential_gap {
             geometry_msgs::Twist controlLaw(geometry_msgs::Pose, nav_msgs::Odometry, sensor_msgs::LaserScan, geometry_msgs::PoseStamped);
             void updateEgoCircle(boost::shared_ptr<sensor_msgs::LaserScan const> msg);
             int targetPoseIdx(geometry_msgs::Pose curr_pose, potential_gap::TrajPlan ref_pose);
+
+            potential_gap::TrajPlan niGen(double, geometry_msgs::PoseStamped, geometry_msgs::PoseArray);
             potential_gap::TrajPlan trajGen(geometry_msgs::PoseArray);
 
         private:

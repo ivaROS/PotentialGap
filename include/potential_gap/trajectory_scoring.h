@@ -7,6 +7,7 @@
 #include <potential_gap/potentialgap_config.h>
 #include <vector>
 #include <map>
+#include <numeric>
 #include <visualization_msgs/MarkerArray.h>
 #include <visualization_msgs/Marker.h>
 #include <Eigen/Core>
@@ -21,6 +22,7 @@
 #include <tf2_ros/transform_listener.h>
 #include <tf2_ros/transform_broadcaster.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <potential_gap/robot_geo_parser.h>
 
 namespace potential_gap{
     class TrajectoryArbiter{
@@ -28,9 +30,19 @@ namespace potential_gap{
         TrajectoryArbiter(){};
         ~TrajectoryArbiter(){};
 
-        TrajectoryArbiter(ros::NodeHandle& nh, const potential_gap::PotentialGapConfig& cfg);
-        TrajectoryArbiter& operator=(TrajectoryArbiter other) {cfg_ = other.cfg_;};
-        TrajectoryArbiter(const TrajectoryArbiter &t) {cfg_ = t.cfg_;};
+        TrajectoryArbiter(ros::NodeHandle& nh, const potential_gap::PotentialGapConfig& cfg, RobotGeoProc& robot_geo_proc);
+        // TrajectoryArbiter(ros::NodeHandle& nh, const potential_gap::PotentialGapConfig& cfg, RobotGeoStorage& robot_geo_storage);
+        TrajectoryArbiter& operator=(TrajectoryArbiter other) 
+        {
+            cfg_ = other.cfg_;
+            robot_geo_proc_ = other.robot_geo_proc_;
+            return *this;
+        }
+        TrajectoryArbiter(const TrajectoryArbiter &t) 
+        {
+            cfg_ = t.cfg_;
+            robot_geo_proc_ = t.robot_geo_proc_;
+        }
         
         void updateEgoCircle(boost::shared_ptr<sensor_msgs::LaserScan const>);
         void updateGapContainer(const std::vector<potential_gap::Gap>);
@@ -52,14 +64,16 @@ namespace potential_gap{
             boost::mutex gap_mutex, gplan_mutex, egocircle_mutex;
 
             double scorePose(geometry_msgs::Pose pose);
-            int searchIdx(geometry_msgs::Pose pose);
+            // int searchIdx(geometry_msgs::Pose pose);
             double dist2Pose(float theta, float dist, geometry_msgs::Pose pose);
-            double chapterScore(double d);
+            double chapterScore(double d, double rmax_offset_val);
             double terminalGoalCost(geometry_msgs::Pose pose);
+            double orientCost(geometry_msgs::Pose pose);
 
             int search_idx = -1;
 
-            double r_inscr, rmax, cobs, w;
+            double r_inscr, rmax, cobs, w, terminal_weight, orient_weight;
+            RobotGeoProc robot_geo_proc_;
     };
 }
 

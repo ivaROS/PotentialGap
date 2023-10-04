@@ -27,6 +27,8 @@ namespace potential_gap {
         nh.param("max_idx_diff", gap_manip.max_idx_diff, gap_manip.max_idx_diff);
         nh.param("radial_extend", gap_manip.radial_extend, gap_manip.radial_extend);
         nh.param("axial_convert", gap_manip.axial_convert, gap_manip.axial_convert);
+        nh.param("inflated_gap", gap_manip.inflated_gap, gap_manip.inflated_gap);
+        nh.param("inflated_gap_scale", gap_manip.inflated_gap_scale, gap_manip.inflated_gap_scale);
 
         // Control Params
         nh.param("k_drive_x",control.k_drive_x, control.k_drive_x);
@@ -39,6 +41,7 @@ namespace potential_gap {
 
         nh.param("vx_absmax",control.vx_absmax, control.vx_absmax);
         nh.param("vy_absmax",control.vy_absmax, control.vy_absmax);
+        nh.param("ang_absmax",control.ang_absmax, control.ang_absmax);
 
         // Projection Params
         nh.param("k_po", projection.k_po, projection.k_po);
@@ -64,7 +67,8 @@ namespace potential_gap {
         nh.param("projection_operator", planning.projection_operator, planning.projection_operator);
         nh.param("niGen_s", planning.niGen_s, planning.niGen_s);
         nh.param("num_feasi_check", planning.num_feasi_check, planning.num_feasi_check);
-        nh.param("num_feasi_check", planning.far_feasible, planning.far_feasible);
+        nh.param("far_feasible", planning.far_feasible, planning.far_feasible);
+        nh.param("use_bezier", planning.use_bezier, planning.use_bezier);
 
         // Trajectory
         nh.param("synthesized_frame", traj.synthesized_frame, traj.synthesized_frame);
@@ -74,7 +78,12 @@ namespace potential_gap {
         nh.param("rmax", traj.rmax, traj.rmax);
         nh.param("inf_ratio", traj.inf_ratio, traj.inf_ratio);
         nh.param("terminal_weight", traj.terminal_weight, traj.terminal_weight);
+        nh.param("orient_weight", traj.orient_weight, traj.orient_weight);
         nh.param("waypoint_ratio", traj.waypoint_ratio, traj.waypoint_ratio);
+        nh.param("bezier_cp_scale", traj.bezier_cp_scale, traj.bezier_cp_scale);
+        nh.param("robot_geo_scale", traj.robot_geo_scale, traj.robot_geo_scale);
+        nh.param("bezier_interp", traj.bezier_interp, traj.bezier_interp);
+        nh.param("bezier_unit_time", traj.bezier_unit_time, traj.bezier_unit_time);
         
         // Robot
         nh.param("r_inscr", rbt.r_inscr, rbt.r_inscr);
@@ -103,6 +112,8 @@ namespace potential_gap {
         gap_manip.max_idx_diff = cfg.max_idx_diff;
         gap_manip.radial_extend = cfg.radial_extend;
         gap_manip.axial_convert = cfg.axial_convert;
+        gap_manip.inflated_gap = cfg.inflated_gap;
+        gap_manip.inflated_gap_scale = cfg.inflated_gap_scale;
 
         // Control Params
         control.k_drive_x = cfg.k_drive_x;
@@ -114,6 +125,7 @@ namespace potential_gap {
         control.ctrl_ahead_pose = cfg.ctrl_ahead_pose;
         control.vx_absmax = cfg.vx_absmax;
         control.vy_absmax = cfg.vy_absmax;
+        control.ang_absmax = cfg.ang_absmax;
 
         // Projection Params
         projection.k_po = cfg.k_po;
@@ -140,6 +152,7 @@ namespace potential_gap {
         planning.niGen_s = cfg.niGen_s;
         planning.num_feasi_check = cfg.num_feasi_check;
         planning.far_feasible = cfg.far_feasible;
+        planning.use_bezier = cfg.use_bezier;
 
         traj.synthesized_frame = cfg.synthesized_frame;
         traj.scale = cfg.scale;
@@ -148,7 +161,12 @@ namespace potential_gap {
         traj.rmax = cfg.rmax;
         traj.inf_ratio = cfg.inf_ratio;
         traj.terminal_weight = cfg.terminal_weight;
+        traj.orient_weight = cfg.orient_weight;
         traj.waypoint_ratio = cfg.waypoint_ratio;
+        traj.bezier_cp_scale = cfg.bezier_cp_scale;
+        traj.robot_geo_scale = cfg.robot_geo_scale;
+        traj.bezier_interp = cfg.bezier_interp;
+        traj.bezier_unit_time = cfg.bezier_unit_time;
 
         man.man_ctrl = cfg.man_ctrl;
         man.man_x = cfg.man_x;

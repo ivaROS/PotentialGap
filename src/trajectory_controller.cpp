@@ -28,6 +28,7 @@ namespace potential_gap{
         }
 
 
+        // ROS_INFO_STREAM("Min idx: " << idx);
 
         for (int i = 1; i < dist.size(); i++) {
             float l1 = egocircle.ranges.at(i);
@@ -46,16 +47,20 @@ namespace potential_gap{
         auto result_fwd = std::find_if(dist.begin() + idx, dist.end(), 
             std::bind1st(std::mem_fun(&TrajectoryController::geqThres), this));
 
+        // ROS_INFO_STREAM("Find 1 terminated");
         auto res_rev = std::find_if(dist.rbegin() + (dist.size() - idx), dist.rend(),
             std::bind1st(std::mem_fun(&TrajectoryController::geqThres), this));
         
+        // ROS_INFO_STREAM("Find terminated");
 
         if (res_rev == dist.rend()) {
+            // ROS_WARN_STREAM("Edge case fix later");
             return std::vector<geometry_msgs::Point>(0);
         }
 
         int idx_fwd = std::distance(dist.begin(), std::prev(result_fwd));
         int idx_rev = std::distance(res_rev, dist.rend());
+        // ROS_INFO_STREAM("Idx fwd: " << idx_fwd << ", Cent: " << idx << ", Rev: " << idx_rev);
 
         int min_idx_range = 0;
         int max_idx_range = int(egocircle.ranges.size() - 1);
@@ -66,11 +71,14 @@ namespace potential_gap{
         float dist_fwd = egocircle.ranges.at(idx_fwd);
         float dist_rev = egocircle.ranges.at(idx_rev);
         float dist_cent = egocircle.ranges.at(idx);
+        // ROS_INFO_STREAM("Dist fwd: " << dist_fwd << ", Cent: " << dist_cent << ", Rev: " << dist_rev);
 
         double angle_fwd = double(idx_fwd) * egocircle.angle_increment + egocircle.angle_min;
         double angle_rev = double(idx_rev) * egocircle.angle_increment + egocircle.angle_min;
         
         if (idx_fwd < idx || idx_rev > idx) {
+            // ROS_WARN_STREAM("Line index weird, return no line");
+            // ROS_WARN_STREAM("Fwd Idx: " << idx_fwd << ", Cent: " << idx << ", Rev" << idx_rev);
             return std::vector<geometry_msgs::Point>(0);
         }
 
@@ -126,7 +134,7 @@ namespace potential_gap{
 
     geometry_msgs::Twist TrajectoryController::controlLaw(
         geometry_msgs::Pose current, nav_msgs::Odometry desired,
-        sensor_msgs::LaserScan inflated_egocircle, geometry_msgs::PoseStamped rbt_in_cam_lc
+        sensor_msgs::LaserScan inflated_egocircle, geometry_msgs::PoseStamped init_pose
     ) {
         // Setup Vars
         boost::mutex::scoped_lock lock(egocircle_l);
@@ -184,7 +192,7 @@ namespace potential_gap{
 
         float u_add_x = 0;
         float u_add_y = 0;
-        float v_ang_fb = 0;
+        double v_ang_fb = 0;
         double v_lin_x_fb = 0;
         double v_lin_y_fb = 0;
 
@@ -205,7 +213,7 @@ namespace potential_gap{
         float min_diff_x = 0;
         float min_diff_y = 0;
 
-        // ROS_INFO_STREAM(rbt_in_cam_lc.pose);
+        // ROS_INFO_STREAM(init_pose.pose);
         
         Eigen::Vector3d comp;
         double prod_mul;
@@ -223,7 +231,7 @@ namespace potential_gap{
             for (int i = 0; i < min_dist_arr.size(); i++) {
                 float angle = i * inflated_egocircle.angle_increment - M_PI;
                 float dist = inflated_egocircle.ranges.at(i);
-                min_dist_arr.at(i) = dist2Pose(angle, dist, rbt_in_cam_lc.pose);
+                min_dist_arr.at(i) = dist2Pose(angle, dist, init_pose.pose);
             }
             int min_idx = std::min_element( min_dist_arr.begin(), min_dist_arr.end() ) - min_dist_arr.begin();
 
@@ -232,10 +240,10 @@ namespace potential_gap{
             // ROS_INFO_STREAM("Local Line End");
             if (vec.size() > 1) {
                 // Visualization and Recenter
-                vec.at(0).x -= rbt_in_cam_lc.pose.position.x;
-                vec.at(0).y -= rbt_in_cam_lc.pose.position.y;
-                vec.at(1).x -= rbt_in_cam_lc.pose.position.x;
-                vec.at(1).y -= rbt_in_cam_lc.pose.position.y;
+                vec.at(0).x -= init_pose.pose.position.x;
+                vec.at(0).y -= init_pose.pose.position.y;
+                vec.at(1).x -= init_pose.pose.position.x;
+                vec.at(1).y -= init_pose.pose.position.y;
 
                 std::vector<std_msgs::ColorRGBA> color;
                 std_msgs::ColorRGBA std_color;
@@ -268,8 +276,8 @@ namespace potential_gap{
             // min_dist -= cfg_->rbt.r_inscr / 2;
 
             min_dist_ang = (float)(min_idx) * inflated_egocircle.angle_increment + inflated_egocircle.angle_min;
-            float min_x = min_dist * cos(min_dist_ang) - rbt_in_cam_lc.pose.position.x;
-            float min_y = min_dist * sin(min_dist_ang) - rbt_in_cam_lc.pose.position.y;
+            float min_x = min_dist * cos(min_dist_ang) - init_pose.pose.position.x;
+            float min_y = min_dist * sin(min_dist_ang) - init_pose.pose.position.y;
             min_dist = sqrt(pow(min_x, 2) + pow(min_y, 2));
 
             // ROS_INFO_STREAM("min_dist: " << min_dist);
@@ -292,45 +300,90 @@ namespace potential_gap{
                     si_der = Eigen::Vector2d(comp(0), comp(1));
                     prod_mul = v_err.dot(si_der);
                 } else if (c.dot(-b) < 0) {
+                    // Dist to pt2
+                    // ROS_INFO_STREAM("Pt2");
                     min_diff_x = - pt2(0);
                     min_diff_y = - pt2(1);
                     comp = projection_method(min_diff_x, min_diff_y);
                     si_der = Eigen::Vector2d(comp(0), comp(1));
                     prod_mul = v_err.dot(si_der);
                 } else {
+                    // Dist to line
+                    // ROS_INFO_STREAM("Line");
+                    // ROS_INFO_STREAM("Pt1: " << pt1(0) << ", " << pt1(1) << ", Pt2: " << pt2(0) << ", " << pt2(1));
                     double line_dist = (pt1(0) * pt2(1) - pt2(0) * pt1(1)) / (pt1 - pt2).norm();
                     double sign;
                     sign = line_dist < 0 ? -1 : 1;
                     line_dist *= sign;
+                    // ROS_INFO_STREAM("Dist to line: " << line_dist);
                     
                     double line_si = (r_min / line_dist - r_min / r_norm) / (1. - r_min / r_norm);
                     double line_si_der_base = r_min / (pow(line_dist, 2) * (r_min / r_norm - 1));
                     double line_si_der_x = - (pt2(1) - pt1(1)) / (pt1 - pt2).norm() * line_si_der_base;
                     double line_si_der_y = - (pt1(0) - pt2(0)) / (pt1 - pt2).norm() * line_si_der_base;
+                    // ROS_INFO_STREAM("si: " << line_si);
+                    // ROS_INFO_STREAM("Der x: " << line_si_der_x << ", Der y: " << line_si_der_y);
                     Eigen::Vector2d der(line_si_der_x, line_si_der_y);
                     der /= der.norm();
+                    // ROS_INFO_STREAM("Normalized der" << der);
                     comp = Eigen::Vector3d(der(0), der(1), line_si);
                     si_der = der;
+                    // si_der(1) = 0;
                     si_der(1) /= 3;
                     prod_mul = v_err.dot(si_der);
+                    // ROS_INFO_STREAM("prodmul: " << prod_mul);
                 }
 
             } else {
+                // ROS_INFO_STREAM("Point Ver");
                 min_diff_x = - min_x;
                 min_diff_y = - min_y;
                 comp = projection_method(min_diff_x, min_diff_y);
                 si_der = Eigen::Vector2d(comp(0), comp(1));
                 si_der(1) /= 3;
                 prod_mul = v_err.dot(si_der);
+                // ROS_INFO_STREAM();
             }
+
+            // ROS_INFO_STREAM("Point res" << projection_method(- min_x, - min_y));
+            
+
+            // min_dist = sqrt(pow(min_diff_x, 2) + pow(min_diff_y, 2));
+            // float si = (r_min / min_dist - r_min / r_norm) / (1. - r_min / r_norm);
+            // float base_const = sqrt(pow(min_dist, 3)) * (r_min - r_norm);
+            // float up_const = r_min * r_norm;
+            // float si_der_x = up_const * min_x / base_const;
+            // float si_der_y = up_const * min_y / base_const;
+
+            // float norm_si_der = sqrt(pow(si_der_x, 2) + pow(si_der_y, 2));
+            // float norm_si_der_x = si_der_x / norm_si_der;
+            // float norm_si_der_y = si_der_y / norm_si_der;
+            // float prod_mul = v_lin_x_fb * norm_si_der_x + v_lin_y_fb * norm_si_der_y;
+
+
+            // ROS_INFO_STREAM("Diff: " << alter_result - prod_mul);
+
+            // ROS_INFO_STREAM("vx: " << v_lin_x_fb << ", vy: " << v_lin_y_fb);
+
+            // ROS_INFO_STREAM("Min_x: " << min_diff_x << ", Min_y: " << min_diff_y);
+
+            // ROS_INFO_STREAM("der x: " << norm_si_der_x << ", der y: " << norm_si_der_y << "norm si der: " << norm_si_der << ", prod" << prod_mul);
+
+            // ROS_INFO_STREAM("Min diff x: " << min_diff_x << ", min diff y: " << min_diff_y);
+
+            // ROS_INFO_STREAM("Si der x: " << si_der_x << ", Si der y: " << si_der_y);
+
+            // ROS_INFO_STREAM("si: " << si << ", prod_mul: " << prod_mul);
 
 
             if(comp(2) >= 0 && prod_mul <= 0)
             {
                 u_add_x = comp(2) * prod_mul * - comp(0);
                 u_add_y = comp(2) * prod_mul * - comp(1);
+                // ROS_INFO_STREAM("comp y" << comp(1));
             }
 
+            // ROS_INFO_STREAM("u add x: " << u_add_x << ", y: " << u_add_y << ", min_dist: " << min_dist);
             visualization_msgs::Marker res;
             res.header.frame_id = cfg_->robot_frame_id;
             res.type = visualization_msgs::Marker::ARROW;
@@ -383,8 +436,15 @@ namespace potential_gap{
             ROS_DEBUG_STREAM_THROTTLE(10, "Projection operator off");
         }
 
+        // ROS_INFO_STREAM(rbt_in_cam_lc);
+
+        // Issue induced by non-holonomicity
+        // The vector is correct, but the trajectory is not
+
         // Make sure no ejection
         u_add_x = std::min(u_add_x, float(0));
+
+        // ROS_INFO_STREAM("Mid vlinx: " << v_lin_x_fb);
 
         if(holonomic)
         {
@@ -397,24 +457,28 @@ namespace potential_gap{
         }
         else
         {
+            // ROS_INFO_STREAM("Non holonomic");
             v_ang_fb = v_ang_fb + v_lin_y_fb + k_po_turn_ * u_add_y + v_ang_const;
+            // v_lin_x_fb = abs(theta_error) > M_PI / 3 ? 0 : v_lin_x_fb + v_lin_x_const + k_po_ * u_add_x;
             v_lin_x_fb = v_lin_x_fb + v_lin_x_const + k_po_ * u_add_x;
 
             if (projection_operator && min_dist_ang > - M_PI / 4 && min_dist_ang < M_PI / 4 && min_dist < cfg_->rbt.r_inscr)
             {
+                // ROS_INFO_STREAM("No x linear");
                 v_lin_x_fb = 0;
                 v_ang_fb *= 2;
             }
 
             v_lin_y_fb = 0;
 
+            // ROS_INFO_STREAM("fin vx: " << v_lin_x_fb << ", vang: " << v_ang_fb);
             if(v_lin_x_fb < 0)
                 v_lin_x_fb = 0;
         }
 
         cmd_vel.linear.x = std::max(-cfg_->control.vx_absmax, std::min(cfg_->control.vx_absmax, v_lin_x_fb));
         cmd_vel.linear.y = std::max(-cfg_->control.vy_absmax, std::min(cfg_->control.vy_absmax, v_lin_y_fb));
-        cmd_vel.angular.z = v_ang_fb;
+        cmd_vel.angular.z = std::max(-cfg_->control.ang_absmax, std::min(cfg_->control.ang_absmax, v_ang_fb));
         return cmd_vel;
     }
 
@@ -518,6 +582,61 @@ namespace potential_gap{
         float x = dist * std::cos(theta);
         float y = dist * std::sin(theta);
         return sqrt(pow(pose.position.x - x, 2) + pow(pose.position.y - y, 2));
+    }
+
+    potential_gap::TrajPlan TrajectoryController::niGen(double lambda, geometry_msgs::PoseStamped curr_pose_odom, geometry_msgs::PoseArray pose_arr_odom)
+    {
+        potential_gap::TrajPlan ni_gen;
+        // geometry_msgs::PoseArray ni_gen;
+        tf::Quaternion quat;
+        tf::quaternionMsgToTF(curr_pose_odom.pose.orientation, quat);
+        double roll, pitch, yaw;
+        tf::Matrix3x3(quat).getRPY(roll, pitch, yaw);
+        turtlebot_trajectory_generator::ni_state x0;
+        x0[0] = curr_pose_odom.pose.position.x; //x
+        x0[1] = curr_pose_odom.pose.position.y; //y
+        x0[2] = yaw;                            //theta
+        x0[3] = -0.1;                           //v
+        x0[4] = 0.0;                            //w
+        x0[5] = lambda;                         //lambda: must be > 0!
+        x0[6] = curr_pose_odom.pose.position.x; //x_d
+        x0[7] = curr_pose_odom.pose.position.y; //y_d
+                                                //]
+        ni_gen.header.frame_id = cfg_->odom_frame_id;
+
+        turtlebot_trajectory_generator::TrajectoryGenerator trajectory_gen;
+        turtlebot_trajectory_generator::desired_traj_func::Ptr traj = std::make_shared<potential_gap::gap_traj_fun>(pose_arr_odom);
+        turtlebot_trajectory_generator::near_identity ni(1, 5, 1, .01); //, 1.0, 1.0, 1.0, 1.0);
+
+        turtlebot_trajectory_generator::ni_controller nc(ni);
+        nc.setTrajFunc(traj);
+
+        std::vector<turtlebot_trajectory_generator::ni_state> x_vec;
+        std::vector<double> times;
+        size_t steps;
+        trajectory_generator::traj_params params = trajectory_gen.getDefaultParams();
+        params.tf = 10;
+        params.dt = 0.2;
+        
+        steps = trajectory_gen.run(nc, x0, x_vec, times, params);
+        
+        for (turtlebot_trajectory_generator::ni_state state : x_vec)
+        {
+            geometry_msgs::Pose ni_pose;
+            geometry_msgs::Twist ni_twist;
+            ni_pose.position.x = state[0];
+            ni_pose.position.y = state[1];
+            ni_twist.linear.x =  state[3];
+            ni_twist.angular.z = state[4];
+            tf2::Quaternion myQuaternion;
+            myQuaternion.setRPY(0, 0, state[2]);
+            myQuaternion.normalize();
+            geometry_msgs::Quaternion quat_msg = tf2::toMsg(myQuaternion);
+            ni_pose.orientation = quat_msg;
+            ni_gen.poses.push_back(ni_pose);
+            ni_gen.twist.push_back(ni_twist);
+        }
+        return ni_gen;
     }
 
 

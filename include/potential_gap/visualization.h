@@ -23,7 +23,11 @@ namespace potential_gap
             ~Visualizer() {};
 
             Visualizer(ros::NodeHandle& nh, const potential_gap::PotentialGapConfig& cfg);
-            Visualizer& operator=(Visualizer other) {cfg_ = other.cfg_;};
+            Visualizer& operator=(Visualizer other) 
+            {
+                cfg_ = other.cfg_;
+                return *this;
+            };
             Visualizer(const Visualizer &t) {cfg_ = t.cfg_;};
 
         protected:
@@ -52,7 +56,7 @@ namespace potential_gap
             using Visualizer::Visualizer;
         public: 
             TrajectoryVisualizer(ros::NodeHandle& nh, const potential_gap::PotentialGapConfig& cfg);
-            void globalPlanRbtFrame(const std::vector<geometry_msgs::PoseStamped> & );
+            void rawGlobalPlan(const std::vector<geometry_msgs::PoseStamped> & );
             void trajScore(geometry_msgs::PoseArray, std::vector<double>);
             void pubAllTraj(std::vector<geometry_msgs::PoseArray> prr);
             void pubAllScore(std::vector<geometry_msgs::PoseArray>, std::vector<std::vector<double>>);
@@ -74,6 +78,26 @@ namespace potential_gap
             ros::Publisher gapwp_pub;
             std_msgs::ColorRGBA gapwp_color;
             std_msgs::ColorRGBA localGoal_color;
+    };
+
+    class BezierVisualizer: public Visualizer{
+        public:
+            using Visualizer::Visualizer;
+            BezierVisualizer(ros::NodeHandle& nh, const potential_gap::PotentialGapConfig& cfg);
+            void drawBezierCps(const std::vector<std::vector<Eigen::Vector2f>>&);
+        private:
+            ros::Publisher cp_pub;
+    };
+
+    class UnionGapVisualizer: public Visualizer{
+        public:
+            using Visualizer::Visualizer;
+            UnionGapVisualizer(ros::NodeHandle& nh, const potential_gap::PotentialGapConfig& cfg);
+            void initialize(ros::NodeHandle& nh, const potential_gap::PotentialGapConfig& cfg);
+            void drawUnionGap(visualization_msgs::MarkerArray &, potential_gap::Gap g);
+            void drawUnionGaps(std::vector<potential_gap::Gap> g);
+        private:
+            ros::Publisher union_gap_pub;
     };
 }
 
