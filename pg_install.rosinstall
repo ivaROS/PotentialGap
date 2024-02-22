@@ -1,0 +1,120 @@
+- git:
+    local-name: PotentialGap
+    uri: git@github.com:ivaROS/PotentialGap.git
+    version: safer_gap
+- git:
+    local-name: SaferGap
+    uri: git@github.com:ivaROS/SaferGap.git
+    version: master
+- git:
+    local-name: control_box_rst
+    uri: git@github.com:ivaROS/control_box_rst.git
+    version: safer_gap
+- git:
+    local-name: cubic_spline_smoother
+    uri: git@github.com:ivaROS/cubic_spline_smoother.git
+    version: main
+- git:
+    local-name: customized_rotate_recovery
+    uri: git@github.com:ivaROS/customized_rotate_recovery.git
+    version: main
+- git:
+    local-name: egocircle
+    uri: git@github.com:ivaROS/egocircle.git
+    version: safer_gap
+- git:
+    local-name: egocircle_utils
+    uri: git@github.com:ivaROS/egocircle_utils.git
+    version: safer_gap
+- git:
+    local-name: egocylindrical
+    uri: git@github.com:ivaROS/egocylindrical.git
+    version: safer_gap
+- git:
+    local-name: full_depthimage_to_laserscan
+    uri: git@github.com:ivaROS/full_depthimage_to_laserscan.git
+    version: noetic-devel
+- git:
+    local-name: gazebo_fake_localization
+    uri: https://github.com/TurtlebotAdventures/gazebo_fake_localization.git
+    version: more_trans_offset
+- git:
+    local-name: move_base_virtual
+    uri: git@github.com:ivaROS/move_base_virtual.git
+    version: safer_gap
+- git:
+    local-name: mpc_local_planner
+    uri: git@github.com:ivaROS/mpc_local_planner.git
+    version: safer_gap
+- git:
+    local-name: navigation_test
+    uri: git@github.com:ivaROS/navigation_test.git
+    version: safer_gap
+- git:
+    local-name: pips
+    uri: git@github.com:ivaROS/pips.git
+    version: safer_gap
+- git:
+    local-name: pips_egocircle
+    uri: git@github.com:ivaROS/pips_egocircle.git
+    version: main
+- git:
+    local-name: pips_egocylindrical
+    uri: git@github.com:ivaROS/pips_egocylindrical.git
+    version: safer_gap
+- git:
+    local-name: pips_msgs
+    uri: git@github.com:ivaROS/pips_msgs.git
+    version: release
+- git:
+    local-name: pips_trajectory_msgs
+    uri: git@github.com:ivaROS/pips_trajectory_msgs.git
+    version: release
+- git:
+    local-name: pips_trajectory_testing
+    uri: git@github.com:ivaROS/pips_trajectory_testing.git
+    version: safer_gap
+- git:
+    local-name: pips_visualization
+    uri: git@github.com:ivaROS/pips_visualization.git
+    version: main
+- git:
+    local-name: realsense_gazebo_plugin
+    uri: https://github.com/ivaROS/realsense_gazebo_plugin.git
+    version: add_pointcloud_d435
+- git:
+    local-name: safer_gap_benchmark
+    uri: git@github.com:ivaROS/safer_gap_benchmark.git
+    version: main
+- git:
+    local-name: stdr_simulator
+    uri: https://github.com/ivaROS/stdr_simulator.git
+    version: noetic
+- git:
+    local-name: tf2_pips
+    uri: git@github.com:ivaROS/tf2_pips.git
+    version: release
+- git:
+    local-name: trajectory_based_local_planner
+    uri: git@github.com:ivaROS/trajectory_based_local_planner.git
+    version: main
+- git:
+    local-name: trajectory_generator
+    uri: git@github.com:ivaROS/trajectory_generator.git
+    version: safer_gap
+- git:
+    local-name: turtlebot_trajectory_controller
+    uri: git@github.com:ivaROS/turtlebot_trajectory_controller.git
+    version: safer_gap
+- git:
+    local-name: turtlebot_trajectory_functions
+    uri: git@github.com:ivaROS/turtlebot_trajectory_functions.git
+    version: release
+- git:
+    local-name: turtlebot_trajectory_generator
+    uri: git@github.com:ivaROS/turtlebot_trajectory_generator.git
+    version: release
+- git:
+    local-name: turtlebot_trajectory_testing
+    uri: git@github.com:ivaROS/turtlebot_trajectory_testing.git
+    version: safer_gap
