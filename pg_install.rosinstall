@@ -3,14 +3,6 @@
     uri: git@github.com:ivaROS/PotentialGap.git
     version: safer_gap
 - git:
-    local-name: SaferGap
-    uri: git@github.com:ivaROS/SaferGap.git
-    version: master
-- git:
-    local-name: control_box_rst
-    uri: git@github.com:ivaROS/control_box_rst.git
-    version: safer_gap
-- git:
     local-name: cubic_spline_smoother
     uri: git@github.com:ivaROS/cubic_spline_smoother.git
     version: main
@@ -41,10 +33,6 @@
 - git:
     local-name: move_base_virtual
     uri: git@github.com:ivaROS/move_base_virtual.git
-    version: safer_gap
-- git:
-    local-name: mpc_local_planner
-    uri: git@github.com:ivaROS/mpc_local_planner.git
     version: safer_gap
 - git:
     local-name: navigation_test
