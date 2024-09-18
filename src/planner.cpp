@@ -160,7 +160,7 @@ namespace potential_gap
         {
             boost::mutex::scoped_lock gapset(gapset_mutex);
             finder->hybridScanGap(msg, observed_gaps);
-            gapvisualizer->drawGaps(observed_gaps, std::string("raw"));
+            // gapvisualizer->drawGaps(observed_gaps, std::string("raw"));
             finder->mergeGapsOneGo(msg, observed_gaps);
             gapvisualizer->drawGaps(observed_gaps, std::string("fin"));
             // ROS_INFO_STREAM("observed_gaps count:" << observed_gaps.size());

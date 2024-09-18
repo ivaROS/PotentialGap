@@ -225,10 +225,9 @@ namespace potential_gap{
         Eigen::Matrix2cd g_des = getComplexMatrix(position.x, position.y, d_yaw);
 
         Eigen::Matrix2cd g_error = g_curr.inverse() * g_des;
-        // float theta_error = std::arg(g_error(0, 0));
+        float theta_error = std::arg(g_error(0, 0));
         float x_error = g_error.real()(0, 1);
         float y_error = g_error.imag()(0, 1);
-
 
         float u_add_x = 0;
         float u_add_y = 0;
@@ -238,6 +237,8 @@ namespace potential_gap{
 
         v_lin_x_fb = x_error * k_drive_x_;
         v_lin_y_fb = y_error * k_drive_y_;
+        if (cfg_->planning.heading)
+            v_ang_fb = theta_error * k_turn_;        
 
         float min_dist_ang = 0;
         float min_dist = 0;
@@ -251,7 +252,6 @@ namespace potential_gap{
         double prod_mul;
         Eigen::Vector2d si_der;
         Eigen::Vector2d v_err(v_lin_x_fb, v_lin_y_fb);
-
 
         if (inflated_egocircle.ranges.size() < 500) {
             ROS_FATAL_STREAM("Scan range incorrect controlLaw");
@@ -428,8 +428,8 @@ namespace potential_gap{
         if(holonomic)
         {
             // v_ang_fb = v_ang_fb + v_ang_const;
-            v_lin_x_fb = v_lin_x_fb + v_lin_x_const + k_po_ * u_add_x; // abs(theta_error) > M_PI / 3? 0 : 
-            v_lin_y_fb = v_lin_y_fb + v_lin_y_const + k_po_ * u_add_y; // abs(theta_error) > M_PI / 3? 0 : 
+            v_lin_x_fb += (v_lin_x_const + k_po_ * u_add_x); // abs(theta_error) > M_PI / 3? 0 : 
+            v_lin_y_fb += (v_lin_y_const + k_po_ * u_add_y); // abs(theta_error) > M_PI / 3? 0 : 
 
             // if(v_lin_x_fb < 0)
             //     v_lin_x_fb = 0;
@@ -453,7 +453,7 @@ namespace potential_gap{
 
         cmd_vel.linear.x = std::max(-cfg_->control.vx_absmax, std::min(cfg_->control.vx_absmax, v_lin_x_fb));
         cmd_vel.linear.y = std::max(-cfg_->control.vy_absmax, std::min(cfg_->control.vy_absmax, v_lin_y_fb));
-        // cmd_vel.angular.z = v_ang_fb;
+        cmd_vel.angular.z = v_ang_fb;
         return cmd_vel;
     }
 

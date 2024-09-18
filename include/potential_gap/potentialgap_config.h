@@ -92,6 +92,7 @@ namespace potential_gap {
 
             struct PlanningMode {
                 bool holonomic = true;
+                bool heading = true; /**< Boolean for if robot tracks path headings or not */
                 bool full_fov = true;
                 bool projection_operator = true;
                 bool niGen_s;
