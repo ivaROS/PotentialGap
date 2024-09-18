@@ -16,7 +16,7 @@ namespace potential_gap
 
     Planner::~Planner() {}
 
-    bool Planner::initialize(const ros::NodeHandle& unh)
+    bool Planner::initialize(const std::string & name)
     {
         if (initialized())
         {
@@ -25,7 +25,28 @@ namespace potential_gap
         }
 
         // Config Setup
-        cfg.loadRosParamFromNodeHandle(unh);
+        cfg.loadRosParamFromNodeHandle(name);
+
+        ROS_INFO_STREAM("cfg.scan_topic: " << cfg.scan_topic);
+        ROS_INFO_STREAM("cfg.odom_topic: " << cfg.odom_topic);
+        ROS_INFO_STREAM("cfg.acc_topic: " << cfg.acc_topic);
+        ROS_INFO_STREAM("cfg.ped_topic: " << cfg.ped_topic);
+
+        ROS_INFO_STREAM("cfg.robot_frame_id: " << cfg.robot_frame_id);
+        ROS_INFO_STREAM("cfg.sensor_frame_id: " << cfg.sensor_frame_id);
+        ROS_INFO_STREAM("cfg.map_frame_id: " << cfg.map_frame_id);
+        ROS_INFO_STREAM("cfg.odom_frame_id: " << cfg.odom_frame_id);
+
+        // std::string robot_name = "/robot" + std::to_string(planner.getCurrentAgentCount());
+
+        // TF Lookup setup
+        tfListener = new tf2_ros::TransformListener(tfBuffer);
+
+        tfSub_ = nh.subscribe("/tf", 10, &Planner::tfCB, this);
+
+        pose_sub = nh.subscribe(cfg.odom_topic, 10, &Planner::poseCB, this);
+
+        laser_sub = nh.subscribe(cfg.scan_topic, 5, &Planner::laserScanCB, this);
 
         // Visualization Setup
         // Fix this later
@@ -35,10 +56,6 @@ namespace potential_gap
         selected_gap_vis_pub = nh.advertise<visualization_msgs::MarkerArray>("sel_gaps", 1);
         ni_traj_pub = nh.advertise<geometry_msgs::PoseArray>("ni_traj", 10);
         ni_traj_pub_other = nh.advertise<visualization_msgs::MarkerArray>("other_ni_traj", 5);
-
-        // TF Lookup setup
-        tfListener = new tf2_ros::TransformListener(tfBuffer);
-        _initialized = true;
 
         finder = new potential_gap::GapUtils(cfg);
         gapvisualizer = new potential_gap::GapVisualizer(nh, cfg);
@@ -59,14 +76,9 @@ namespace potential_gap
 
         log_vel_comp.set_capacity(cfg.planning.halt_size);
 
-        currentAgentCount_ = cfg.env.num_agents;
+        _initialized = true;
 
         return true;
-    }
-
-    bool Planner::initialized()
-    {
-        return _initialized;
     }
 
     bool Planner::isGoalReached()
@@ -95,40 +107,69 @@ namespace potential_gap
         return false;
     }
 
-    void Planner::inflatedlaserScanCB(boost::shared_ptr<sensor_msgs::LaserScan const> msg)
+
+    void Planner::tfCB(const tf2_msgs::TFMessage& msg)
     {
-        sharedPtr_inflatedlaser = msg;
+        // ignoring message entirely, just making separate thread for tfs to not
+        // tether to other callbacks
+
+        try 
+        {
+            // ROS_INFO_STREAM_NAMED("Planner", "cfg.robot_frame_id: " << cfg.robot_frame_id);        
+            // ROS_INFO_STREAM_NAMED("Planner", "cfg.map_frame_id: " << cfg.map_frame_id);        
+            // ROS_INFO_STREAM_NAMED("Planner", "cfg.odom_frame_id: " << cfg.odom_frame_id);        
+            // ROS_INFO_STREAM_NAMED("Planner", "cfg.sensor_frame_id: " << cfg.sensor_frame_id);        
+
+            // for lookupTransform, parameters are (destination frame, source frame)
+            map2rbt  = tfBuffer.lookupTransform(cfg.robot_frame_id, cfg.map_frame_id, ros::Time(0));
+            odom2rbt = tfBuffer.lookupTransform(cfg.robot_frame_id, cfg.odom_frame_id, ros::Time(0));
+            rbt2odom = tfBuffer.lookupTransform(cfg.odom_frame_id, cfg.robot_frame_id, ros::Time(0));
+            map2odom = tfBuffer.lookupTransform(cfg.odom_frame_id, cfg.map_frame_id, ros::Time(0));
+            cam2odom = tfBuffer.lookupTransform(cfg.odom_frame_id, cfg.sensor_frame_id, ros::Time(0));
+            rbt2cam = tfBuffer.lookupTransform(cfg.sensor_frame_id, cfg.robot_frame_id, ros::Time(0));
+
+            haveTFs = true;
+
+            tf2::doTransform(rbt_in_rbt, rbt_in_cam, rbt2cam);
+
+            ROS_INFO_STREAM("tfCB succeeded");
+        } catch (...) 
+        {
+            ROS_WARN_STREAM("tfCB failed");
+            ros::Duration(0.1).sleep();
+            return;
+        }
     }
 
-    void Planner::laserScanCB(boost::shared_ptr<sensor_msgs::LaserScan const> msg)
+    void Planner::laserScanCB(boost::shared_ptr<sensor_msgs::LaserScan> msg)
     {
         // ROS_INFO_STREAM("[laserScanCB]");
 
+
+        float eps = 0.0000001f;
+        for (int i = 0; i < msg->ranges.size(); i++)
+            msg->ranges.at(i) = (std::isnan(msg->ranges.at(i)) ? cfg.scan.range_max - eps : msg->ranges.at(i));
+
         sharedPtr_laser = msg;
 
-        if (cfg.planning.planning_inflated && sharedPtr_inflatedlaser) {
-            msg = sharedPtr_inflatedlaser;
-        }
+        cfg.updateParamFromScan(sharedPtr_laser);
 
         // ROS_INFO_STREAM(msg.get()->ranges.size());
 
-        try {
+        try 
+        {
             boost::mutex::scoped_lock gapset(gapset_mutex);
             finder->hybridScanGap(msg, observed_gaps);
             gapvisualizer->drawGaps(observed_gaps, std::string("raw"));
             finder->mergeGapsOneGo(msg, observed_gaps);
             gapvisualizer->drawGaps(observed_gaps, std::string("fin"));
             // ROS_INFO_STREAM("observed_gaps count:" << observed_gaps.size());
-        } catch (...) {
+        } catch (...) 
+        {
             ROS_FATAL_STREAM("mergeGapsOneGo");
         }
 
-        boost::shared_ptr<sensor_msgs::LaserScan const> tmp;
-        if (sharedPtr_inflatedlaser) {
-            tmp = sharedPtr_inflatedlaser;
-        } else {
-            tmp = msg;
-        }
+        boost::shared_ptr<sensor_msgs::LaserScan const> tmp = msg;
 
         geometry_msgs::PoseStamped local_goal;
         {
@@ -150,7 +191,8 @@ namespace potential_gap
     {
         // ROS_INFO_STREAM("[poseCB]");
 
-        updateTF();
+        if (!haveTFs)
+            return;
 
         // Transform the msg to odom frame
         if(msg->header.frame_id != cfg.odom_frame_id)
@@ -170,12 +212,15 @@ namespace potential_gap
         }
     }
 
-    bool Planner::setGoal(const std::vector<geometry_msgs::PoseStamped> &plan)
+    bool Planner::setPlan(const std::vector<geometry_msgs::PoseStamped> &plan)
     {
-        // ROS_INFO_STREAM("[setGoal]");
+        // ROS_INFO_STREAM("[setPlan]");
 
         if (plan.size() == 0)
             return true;
+
+        if (!haveTFs)
+            return false;
 
         geometry_msgs::PoseStamped globalGoalMapFrame = *std::prev(plan.end());
 
@@ -225,36 +270,8 @@ namespace potential_gap
         return true;
     }
 
-    void Planner::updateTF()
+    std::vector<potential_gap::Gap> Planner::gapManipulate() 
     {
-        // ROS_INFO_STREAM("[updateTF]");
-
-        try {
-            map2rbt  = tfBuffer.lookupTransform(cfg.robot_frame_id, cfg.map_frame_id, ros::Time(0));
-            rbt2map  = tfBuffer.lookupTransform(cfg.map_frame_id, cfg.robot_frame_id, ros::Time(0));
-            odom2rbt = tfBuffer.lookupTransform(cfg.robot_frame_id, cfg.odom_frame_id, ros::Time(0));
-            rbt2odom = tfBuffer.lookupTransform(cfg.odom_frame_id, cfg.robot_frame_id, ros::Time(0));
-            cam2odom = tfBuffer.lookupTransform(cfg.odom_frame_id, cfg.sensor_frame_id, ros::Time(0));
-            map2odom = tfBuffer.lookupTransform(cfg.odom_frame_id, cfg.map_frame_id, ros::Time(0));
-            rbt2cam = tfBuffer.lookupTransform(cfg.sensor_frame_id, cfg.robot_frame_id, ros::Time(0));
-
-            tf2::doTransform(rbt_in_rbt, rbt_in_cam, rbt2cam);
-        } catch (tf2::TransformException &ex) {
-            ROS_WARN("%s", ex.what());
-            ros::Duration(0.1).sleep();
-            return;
-        }
-    }
-
-    [[deprecated("Use Proper trajectory scoring instead")]]
-    void Planner::vectorSelectGap(potential_gap::Gap & selected_gap)
-    {
-        potential_gap::Gap result = trajArbiter->returnAndScoreGaps();
-        selected_gap = result;
-        return;
-    }
-
-    std::vector<potential_gap::Gap> Planner::gapManipulate() {
         boost::mutex::scoped_lock gapset(gapset_mutex);
         std::vector<potential_gap::Gap> manip_set;
         manip_set = observed_gaps;
@@ -277,7 +294,8 @@ namespace potential_gap
     }
 
     // std::vector<geometry_msgs::PoseArray>
-    std::vector<std::vector<double>> Planner::initialTrajGen(std::vector<potential_gap::Gap> vec, std::vector<geometry_msgs::PoseArray>& res) {
+    std::vector<std::vector<double>> Planner::initialTrajGen(std::vector<potential_gap::Gap> vec, std::vector<geometry_msgs::PoseArray>& res) 
+    {
         boost::mutex::scoped_lock gapset(gapset_mutex);
         std::vector<geometry_msgs::PoseArray> ret_traj(vec.size());
         std::vector<std::vector<double>> ret_traj_scores(vec.size());
@@ -458,43 +476,41 @@ namespace potential_gap
             return geometry_msgs::Twist();
         }
 
-        // Know Current Pose
-        geometry_msgs::PoseStamped curr_pose_local;
-        curr_pose_local.header.frame_id = cfg.robot_frame_id;
-        curr_pose_local.pose.orientation.w = 1;
-        geometry_msgs::PoseStamped curr_pose_odom;
-        curr_pose_odom.header.frame_id = cfg.odom_frame_id;
-        tf2::doTransform(curr_pose_local, curr_pose_odom, rbt2odom);
-        geometry_msgs::Pose curr_pose = curr_pose_odom.pose;
+        if (!haveTFs)
+            return geometry_msgs::Twist();
+        
+        sensor_msgs::LaserScan stored_scan_msgs = *sharedPtr_laser.get();
 
-        auto orig_ref = trajController->trajGen(traj);
-        ctrl_idx = trajController->targetPoseIdx(curr_pose, orig_ref);
-        nav_msgs::Odometry ctrl_target_pose;
-        ctrl_target_pose.header = orig_ref.header;
-        ctrl_target_pose.pose.pose = orig_ref.poses.at(ctrl_idx);
-        ctrl_target_pose.twist.twist = orig_ref.twist.at(ctrl_idx);
+        if (traj.poses.size() < 2) // OBSTACLE AVOIDANCE CONTROL 
+        { 
+            ROS_INFO_STREAM_NAMED("Planner", "Available Execution Traj length: " << traj.poses.size() << " < 2, obstacle avoidance control chosen.");
+            auto cmd_vel = trajController->obstacleAvoidanceControlLaw(stored_scan_msgs);
+            return cmd_vel;
+        } else
+        {
 
-        sensor_msgs::LaserScan stored_scan_msgs;
-        if (cfg.planning.projection_inflated) {
-            stored_scan_msgs = *sharedPtr_inflatedlaser.get();
-        } else {
-            stored_scan_msgs = *sharedPtr_laser.get();
+            // Know Current Pose
+            geometry_msgs::PoseStamped curr_pose_local;
+            curr_pose_local.header.frame_id = cfg.robot_frame_id;
+            curr_pose_local.pose.orientation.w = 1;
+            geometry_msgs::PoseStamped curr_pose_odom;
+            curr_pose_odom.header.frame_id = cfg.odom_frame_id;
+            tf2::doTransform(curr_pose_local, curr_pose_odom, rbt2odom);
+            geometry_msgs::Pose curr_pose = curr_pose_odom.pose;
+
+            auto orig_ref = trajController->trajGen(traj);
+            ctrl_idx = trajController->targetPoseIdx(curr_pose, orig_ref);
+            nav_msgs::Odometry ctrl_target_pose;
+            ctrl_target_pose.header = orig_ref.header;
+            ctrl_target_pose.pose.pose = orig_ref.poses.at(ctrl_idx);
+            ctrl_target_pose.twist.twist = orig_ref.twist.at(ctrl_idx);
+
+
+            geometry_msgs::PoseStamped rbt_in_cam_lc = rbt_in_cam;
+            auto cmd_vel = trajController->controlLaw(curr_pose, ctrl_target_pose, stored_scan_msgs, rbt_in_cam_lc);
+
+            return cmd_vel;
         }
-
-        geometry_msgs::PoseStamped rbt_in_cam_lc = rbt_in_cam;
-        auto cmd_vel = trajController->controlLaw(curr_pose, ctrl_target_pose, stored_scan_msgs, rbt_in_cam_lc);
-
-        return cmd_vel;
-    }
-
-    void Planner::rcfgCallback(potential_gap::pgConfig &config, uint32_t level)
-    {
-        cfg.reconfigure(config);
-
-        // set_capacity destroys everything if different from original size,
-        // resize only if the new size is greater
-        log_vel_comp.clear();
-        log_vel_comp.set_capacity(cfg.planning.halt_size);
     }
 
     geometry_msgs::PoseArray Planner::getPlanTrajectory() {
@@ -518,11 +534,11 @@ namespace potential_gap
         log_vel_comp.push_back(val);
         double cum_vel_sum = std::accumulate(log_vel_comp.begin(), log_vel_comp.end(), double(0));
         bool ret_val = cum_vel_sum > 1.0 || !log_vel_comp.full();
-        if (!ret_val && !cfg.man.man_ctrl) {
+        if (!ret_val) {
             ROS_FATAL_STREAM("--------------------------Planning Failed--------------------------");
             reset();
         }
-        return ret_val || cfg.man.man_ctrl;
+        return ret_val;
     }
 
 }

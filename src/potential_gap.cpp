@@ -1,7 +1,6 @@
 #include <ros/ros.h>
 #include <potential_gap/potential_gap.h>
 #include <potential_gap/gap.h>
-#include <pluginlib/class_list_macros.h>
 
 #include <visualization_msgs/Marker.h>
 #include <visualization_msgs/MarkerArray.h>
@@ -12,6 +11,11 @@
 #include <cmath>
 #include <math.h>
 
+// MBF return codes
+#include <mbf_msgs/ExePathResult.h>
+
+// pluginlib macros
+#include <pluginlib/class_list_macros.h>
 // using namespace boost::numeric::odeint;
 namespace pl = std::placeholders;
 
@@ -22,16 +26,6 @@ PLUGINLIB_EXPORT_CLASS(potential_gap::PotentialGapPlanner, nav_core::BaseLocalPl
 
 namespace potential_gap 
 {
-    PotentialGapPlanner::PotentialGapPlanner()
-    {
-        ROS_INFO_STREAM("Planner constructed");
-    }
-
-    PotentialGapPlanner::~PotentialGapPlanner()
-    {
-        ROS_INFO_STREAM("Planner terminated");
-    }
-
     bool PotentialGapPlanner::isGoalReached()
     {
         ROS_INFO_STREAM("[isGoalReached()]");
@@ -43,11 +37,13 @@ namespace potential_gap
     {
         ROS_INFO_STREAM("[setPlan()]");
 
-        bool success = planner.setGoal(plan);
-
-        ROS_INFO_STREAM("       success: " << success); 
-
-        return success;
+        if (!planner.initialized())
+        {
+            return false;
+        } else
+        {
+            return planner.setPlan(plan);
+        }
     }
 
     void PotentialGapPlanner::initialize(std::string name, tf2_ros::Buffer* tf, costmap_2d::Costmap2DROS* costmap_ros)
@@ -55,47 +51,76 @@ namespace potential_gap
         ROS_INFO_STREAM("[initialize()]");
 
         planner_name = name;
-        ros::NodeHandle pnh("~/" + planner_name);
+        // ros::NodeHandle pnh("~/" + planner_name);
 
-        planner.initialize(pnh);
-
-        std::string robot_name = "/robot" + std::to_string(planner.getCurrentAgentCount());
-
-        laser_sub = pnh.subscribe(robot_name + "/mod_laser_0", 100, &Planner::laserScanCB, &planner);
-        // inflated_laser_sub = pnh.subscribe("/inflated_point_scan", 100, &Planner::inflatedlaserScanCB, &planner);
-        // feasi_laser_sub = pnh.subscribe("/inflated_point_scan", 100, &Planner::inflatedlaserScanCB, &planner);
-        
-        pose_sub = pnh.subscribe(robot_name + "/odom",10, &Planner::poseCB, &planner);
-        initialized = true;
-
-        // Setup dynamic reconfigure
-        dynamic_recfg_server = boost::make_shared<dynamic_reconfigure::Server <potential_gap::pgConfig> > (pnh);
-        f = boost::bind(&potential_gap::Planner::rcfgCallback, &planner, _1, _2);
-        dynamic_recfg_server->setCallback(f);
+        planner.initialize(planner_name); // pnh);
     }
 
-    bool PotentialGapPlanner::computeVelocityCommands(geometry_msgs::Twist & cmd_vel)
+    uint32_t PotentialGapPlanner::computeVelocityCommands(const geometry_msgs::PoseStamped& pose,
+                                                        const geometry_msgs::TwistStamped& velocity,
+                                                        geometry_msgs::TwistStamped &cmd_vel,
+                                                        std::string &message)
     {
         ROS_INFO_STREAM("[computeVelocityCommands()]");
 
         if (!planner.initialized())
         {
-            ros::NodeHandle pnh("~/" + planner_name);
-            planner.initialize(pnh);
+            planner.initialize(planner_name);
             ROS_WARN_STREAM("computerVelocity called before initializing planner");
         }
 
         auto final_traj = planner.getPlanTrajectory();
 
-        cmd_vel = planner.ctrlGeneration(final_traj);
+        geometry_msgs::Twist cmdVelNoStamp = planner.ctrlGeneration(final_traj);
 
-        return planner.recordAndCheckVel(cmd_vel);
+        cmd_vel.twist = cmdVelNoStamp;
+
+        bool old_flag = planner.recordAndCheckVel(cmdVelNoStamp);
+
+        /*
+        *         SUCCESS           = 0
+        *         1..9 are reserved as plugin specific non-error results
+        *         FAILURE           = 100  # Unspecified failure, only used for old, non-mfb_core based plugins
+        *         CANCELED          = 101
+        *         NO_VALID_CMD      = 102
+        *         PAT_EXCEEDED      = 103
+        *         COLLISION         = 104
+        *         OSCILLATION       = 105
+        *         ROBOT_STUCK       = 106
+        *         MISSED_GOAL       = 107
+        *         MISSED_PATH       = 108
+        *         BLOCKED_GOAL      = 109
+        *         BLOCKED_PATH      = 110
+        *         INVALID_PATH      = 111
+        *         TF_ERROR          = 112
+        *         NOT_INITIALIZED   = 113
+        *         INVALID_PLUGIN    = 114
+        *         INTERNAL_ERROR    = 115
+        *         OUT_OF_MAP        = 116  # The start and / or the goal are outside the map
+        *         MAP_ERROR         = 117  # The map is not running properly
+        *         STOPPED           = 118  # The controller execution has been stopped rigorously
+        */
+
+        return mbf_msgs::ExePathResult::SUCCESS;        
     }
 
-    void PotentialGapPlanner::reset()
+    bool PotentialGapPlanner::computeVelocityCommands(geometry_msgs::Twist & cmd_vel)
     {
-        planner.reset();
-        return;
-    }
+        ROS_INFO_STREAM("[PotentialGapPlanner::computeVelocityCommands(short)]");
 
+        std::string dummy_message;
+        geometry_msgs::PoseStamped dummy_pose;
+        geometry_msgs::TwistStamped dummy_velocity, cmd_vel_stamped;
+
+        bool outcome = computeVelocityCommands(dummy_pose, dummy_velocity, cmd_vel_stamped, dummy_message);
+
+        cmd_vel = cmd_vel_stamped.twist;
+
+        ROS_INFO_STREAM("computeVelocityCommands cmdVel: " << cmd_vel);
+
+        // TODO: just hardcoding this now, need to revise
+        bool success = 1;
+
+        return success;
+    }
 }

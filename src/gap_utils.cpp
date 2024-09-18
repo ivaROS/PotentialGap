@@ -45,7 +45,7 @@ namespace potential_gap {
                     detected_gap.setMinSafeDist(min_dist);
                     // Inscribed radius gets enforced here, or unless using inflated egocircle,
                     // then no need for range diff
-                    if (detected_gap.get_dist_side() > 2 * cfg_->rbt.r_inscr || cfg_->planning.planning_inflated) observed_gaps.push_back(detected_gap);
+                    if (detected_gap.get_dist_side() > 2 * cfg_->rbt.r_inscr) observed_gaps.push_back(detected_gap);
                 }
                 
             }
@@ -62,7 +62,7 @@ namespace potential_gap {
                     detected_gap.setMinSafeDist(min_dist);
                     // Inscribed radius gets enforced here, or unless using inflated egocircle,
                     // then no need for range diff
-                    if (detected_gap.get_dist_side() > 2 * cfg_->rbt.r_inscr || cfg_->planning.planning_inflated) observed_gaps.push_back(detected_gap);
+                    if (detected_gap.get_dist_side() > 2 * cfg_->rbt.r_inscr) observed_gaps.push_back(detected_gap);
                 }
                 else // previously not marked a gap, not marking the gap
                 {
@@ -146,7 +146,7 @@ namespace potential_gap {
                             int erase_counter = 0;
                             int last_mergable = -1;
 
-                            float coefs = cfg_->planning.planning_inflated ? 0 : 2;
+                            float coefs = 2;
                             for (int j = (int) (second_gap.size() - 1); j >= 0; j--)
                             {
                                 int start_idx = std::min(second_gap[j].RIdx(), observed_gaps[i].LIdx());

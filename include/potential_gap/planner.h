@@ -35,9 +35,6 @@
 
 #include <omp.h>
 
-#include <dynamic_reconfigure/server.h>
-#include <potential_gap/pgConfig.h>
-
 #include <boost/thread/mutex.hpp>
 #include <boost/circular_buffer.hpp>
 
@@ -74,6 +71,10 @@ namespace potential_gap
         ros::Publisher ni_traj_pub;
         ros::Publisher ni_traj_pub_other;
 
+        ros::Subscriber tfSub_; /**< Subscriber to TF tree */
+        ros::Subscriber laser_sub; // , inflated_laser_sub;
+        ros::Subscriber pose_sub;
+
         // Goals and stuff
         // double goal_orientation;
         geometry_msgs::Pose current_pose_;
@@ -103,6 +104,7 @@ namespace potential_gap
         // Status
         bool hasGoal = false;
         bool _initialized = false;
+        bool haveTFs = false;
 
         geometry_msgs::PoseArray pose_arr;
         geometry_msgs::PoseArray pose_arr_odom;
@@ -112,14 +114,9 @@ namespace potential_gap
 
         geometry_msgs::Pose sharedPtr_pose;
         boost::shared_ptr<sensor_msgs::LaserScan const> sharedPtr_laser;
-        boost::shared_ptr<sensor_msgs::LaserScan const> sharedPtr_inflatedlaser;
 
         ros::WallTime last_time;
         potential_gap::TrajPlan ni_ref, orig_ref;
-
-        // Dynamic Reconfigure
-        boost::shared_ptr<dynamic_reconfigure::Server<potential_gap::pgConfig> > dynamic_recfg_server;
-        dynamic_reconfigure::Server<potential_gap::pgConfig>::CallbackType f;
 
         bool replan = true;
         
@@ -144,14 +141,14 @@ namespace potential_gap
          * @param None
          * @return initialization success / failure
          */
-        bool initialize(const ros::NodeHandle&);
+        bool initialize(const std::string & name);
 
         /**
          * Return initialization status
          * @param None
          * @return bool initialization status
          */
-        bool initialized();
+        bool initialized() { return _initialized; }
 
         /**
         * \brief Getter for number of agents currently in environment
@@ -167,12 +164,17 @@ namespace potential_gap
         bool isGoalReached();
 
         /**
+        * \brief Function for updating all tf transform at the beginning of every planning cycle
+        * \param msg incoming agent odometry message
+        */
+        void tfCB(const tf2_msgs::TFMessage& msg);
+
+        /**
          * call back function to laserscan, externally linked
          * @param msg laser scan msg
          * @return None, laser scan msg stored locally
          */
-        void laserScanCB(boost::shared_ptr<sensor_msgs::LaserScan const> msg);
-        void inflatedlaserScanCB(boost::shared_ptr<sensor_msgs::LaserScan const> msg);
+        void laserScanCB(boost::shared_ptr<sensor_msgs::LaserScan> msg);
 
         /**
          * call back function to pose, pose information obtained here only used when a new goal is used
@@ -186,7 +188,7 @@ namespace potential_gap
          * @param plan, vector of PoseStamped
          * @return boolean type on whether successfully registered goal
          */
-        bool setGoal(const std::vector<geometry_msgs::PoseStamped> &plan);
+        bool setPlan(const std::vector<geometry_msgs::PoseStamped> &plan);
 
         /**
          * update all tf transform at the beginning of every planning cycle
@@ -194,14 +196,6 @@ namespace potential_gap
          * @return None, all registered via internal variables in TransformStamped
          */
         void updateTF();
-
-        /**
-         * select the gap to pass through based on where the goal is
-         * TODO: make this polymorphism so more than one strategy can be adopted
-         * @param selected_gap that will be returned by the same variable
-         * @return selected_gap via the passed in variable
-         */
-        void vectorSelectGap(potential_gap::Gap & selected_gap);
 
         /**
          * Generate ctrl command to a target pose
@@ -223,13 +217,6 @@ namespace potential_gap
          *
          */
         std::vector<std::vector<double>> initialTrajGen(std::vector<potential_gap::Gap>, std::vector<geometry_msgs::PoseArray>&);
-
-        /**
-         * Callback function to config object
-         * @param incoming config
-         * @param level Level of incoming config
-         */
-        void rcfgCallback(potential_gap::pgConfig &config, uint32_t level);
 
         /**
          * Pick the best trajectory from the current set

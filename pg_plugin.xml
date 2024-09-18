@@ -1,7 +1,17 @@
 <library path="lib/libpotential_gap">
 
-  <class name="potential_gap/PotentialGapPlanner" type="potential_gap::PotentialGapPlanner" base_class_type="nav_core::BaseLocalPlanner">
+  <class name="potential_gap/PotentialGapPlannerROS" 
+          type="potential_gap::PotentialGapPlanner" 
+          base_class_type="nav_core::BaseLocalPlanner">
     <description>This is a Potential Gap plugin.</description>
   </class>
+
+	<class name="potential_gap/PotentialGapPlannerROS" 
+          type="potential_gap::PotentialGapPlanner" 
+          base_class_type="mbf_costmap_core::CostmapController">
+		<description>
+			Same plugin implemented MBF CostmapController's extended interface.
+		</description>
+	</class>
 
 </library>

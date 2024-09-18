@@ -27,6 +27,8 @@ namespace potential_gap {
 
             TrajectoryController(ros::NodeHandle& nh, const potential_gap::PotentialGapConfig& cfg);
             geometry_msgs::Twist controlLaw(geometry_msgs::Pose, nav_msgs::Odometry, sensor_msgs::LaserScan, geometry_msgs::PoseStamped);
+            geometry_msgs::Twist obstacleAvoidanceControlLaw(const sensor_msgs::LaserScan & scan_);
+            
             void updateEgoCircle(boost::shared_ptr<sensor_msgs::LaserScan const> msg);
             int targetPoseIdx(geometry_msgs::Pose curr_pose, potential_gap::TrajPlan ref_pose);
             potential_gap::TrajPlan trajGen(geometry_msgs::PoseArray);

@@ -15,7 +15,7 @@ endif()
 find_package(catkin REQUIRED COMPONENTS
   base_local_planner
   pluginlib
-  dynamic_reconfigure
+  # dynamic_reconfigure
   # egocircle
   geometry_msgs
   nav_msgs
@@ -23,16 +23,12 @@ find_package(catkin REQUIRED COMPONENTS
   rospy
   std_msgs
   # benchmarking_tools
-  pips_trajectory_msgs
-  dynamic_reconfigure
+  # pips_trajectory_msgs
+  # dynamic_reconfigure
   message_generation
 )
 find_package(Boost REQUIRED COMPONENTS system)
 find_package(Eigen3 REQUIRED)
-
-generate_dynamic_reconfigure_options(
-  cfg/pg.cfg
-)
 
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
@@ -58,7 +54,7 @@ catkin_package(
 #  LIBRARIES potential_gap
   INCLUDE_DIRS ${EIGEN3_INCLUDE_DIRS}
   DEPENDS OpenMP 
-  CATKIN_DEPENDS base_local_planner dynamic_reconfigure egocircle geometry_msgs nav_msgs roscpp rospy std_msgs sensor_msgs pips_trajectory_msgs message_runtime
+  CATKIN_DEPENDS base_local_planner geometry_msgs nav_msgs roscpp rospy std_msgs sensor_msgs message_runtime
 )
 
 
@@ -76,9 +72,10 @@ add_library(potential_gap
   src/gap_manip.cpp
   src/trajectory_controller.cpp
   ) 
-add_dependencies(potential_gap ${PROJECT_NAME}_gencfg)
+
 target_compile_options(potential_gap PRIVATE ${OpenMP_FLAGS})
 target_link_libraries(potential_gap
 ${catkin_LIBRARIES}
 ${OpenMP_LIBS}
 )
+add_dependencies(potential_gap ${PROJECT_NAME}_generate_messages_cpp)
