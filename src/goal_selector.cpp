@@ -6,13 +6,15 @@ namespace potential_gap {
         cfg_ = &cfg;
     }
 
-    bool GoalSelector::setGoal(
-        const std::vector<geometry_msgs::PoseStamped> &plan) {
+    void GoalSelector::setGoal(const std::vector<geometry_msgs::PoseStamped> &plan) {
         // Incoming plan is in map frame
         boost::mutex::scoped_lock lock(goal_select_mutex);
         boost::mutex::scoped_lock gplock(gplan_mutex);
         global_plan.clear();
         global_plan = plan;
+
+        ROS_INFO_STREAM("global_plan.size(): " << global_plan.size());
+
         // transform plan to robot frame such as base_link
     }
 

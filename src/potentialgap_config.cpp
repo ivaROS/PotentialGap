@@ -8,6 +8,9 @@ namespace potential_gap {
         nh.param("robot_frame_id", robot_frame_id, robot_frame_id);
         nh.param("sensor_frame_id", sensor_frame_id, sensor_frame_id);
 
+        // Environment
+        nh.param("num_agents", env.num_agents, env.num_agents);
+
         // Gap Visualization
         nh.param("min_resoln", gap_viz.min_resoln, gap_viz.min_resoln);
         nh.param("close_gap", gap_viz.close_gap_vis, gap_viz.close_gap_vis);

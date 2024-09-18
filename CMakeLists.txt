@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.3)
+cmake_minimum_required(VERSION 3.10)
 project(potential_gap)
 
 add_compile_options(-std=c++17)
@@ -16,7 +16,7 @@ find_package(catkin REQUIRED COMPONENTS
   base_local_planner
   pluginlib
   dynamic_reconfigure
-  egocircle
+  # egocircle
   geometry_msgs
   nav_msgs
   roscpp

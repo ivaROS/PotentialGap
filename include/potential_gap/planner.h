@@ -131,6 +131,8 @@ namespace potential_gap
 
         boost::circular_buffer<double> log_vel_comp;
 
+        int currentAgentCount_; /**< Number of agents in environment */
+
     public:
         Planner();
 
@@ -150,6 +152,12 @@ namespace potential_gap
          * @return bool initialization status
          */
         bool initialized();
+
+        /**
+        * \brief Getter for number of agents currently in environment
+        * \return number of agents currently in environment
+        */
+        int getCurrentAgentCount() { return currentAgentCount_; }
 
         /**
          * Check if reached goal using euclidean dist

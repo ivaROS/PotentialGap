@@ -6,6 +6,7 @@
 #include <potential_gap/gap.h>
 #include <potential_gap/potentialgap_config.h>
 #include <vector>
+#include <numeric>
 #include <map>
 #include <visualization_msgs/MarkerArray.h>
 #include <visualization_msgs/Marker.h>

@@ -15,6 +15,14 @@ namespace potential_gap {
             std::string robot_frame_id;
             std::string sensor_frame_id;
 
+            /**
+            * \brief Hyperparameters for planning environment
+            */
+            struct Environment
+            {
+                int num_agents = 0; /**< Total number of agents in environment */
+            } env;
+            
             struct GapVisualization {
                 int min_resoln;
                 bool close_gap_vis;
@@ -150,9 +158,9 @@ namespace potential_gap {
             planning.feasi_inflated = false;
             planning.projection_inflated = false;
             planning.planning_inflated = false;
-            planning.holonomic = false;
+            planning.holonomic = true;
             planning.full_fov = false;
-            planning.projection_operator = true;
+            planning.projection_operator = false;
             planning.niGen_s = false;
             planning.num_feasi_check = 10;
             planning.far_feasible = false;

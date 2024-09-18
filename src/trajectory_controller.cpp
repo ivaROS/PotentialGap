@@ -177,7 +177,7 @@ namespace potential_gap{
         Eigen::Matrix2cd g_des = getComplexMatrix(position.x, position.y, d_yaw);
 
         Eigen::Matrix2cd g_error = g_curr.inverse() * g_des;
-        float theta_error = std::arg(g_error(0, 0));
+        // float theta_error = std::arg(g_error(0, 0));
         float x_error = g_error.real()(0, 1);
         float y_error = g_error.imag()(0, 1);
 
@@ -190,11 +190,11 @@ namespace potential_gap{
 
         if (cfg_->man.man_ctrl) {
             ROS_INFO_STREAM("Manual Control");
-            v_ang_fb = cfg_->man.man_theta;
+            // v_ang_fb = cfg_->man.man_theta;
             v_lin_x_fb = cfg_->man.man_x;
             v_lin_y_fb = cfg_->man.man_y;
         } else {
-            v_ang_fb = theta_error * k_turn_;
+            // v_ang_fb = theta_error * k_turn_;
             v_lin_x_fb = x_error * k_drive_x_;
             v_lin_y_fb = y_error * k_drive_y_;
         }
@@ -388,33 +388,33 @@ namespace potential_gap{
 
         if(holonomic)
         {
-            v_ang_fb = v_ang_fb + v_ang_const;
-            v_lin_x_fb = abs(theta_error) > M_PI / 3? 0 : v_lin_x_fb + v_lin_x_const + k_po_ * u_add_x;
-            v_lin_y_fb = abs(theta_error) > M_PI / 3? 0 : v_lin_y_fb + v_lin_y_const + k_po_ * u_add_y;
+            // v_ang_fb = v_ang_fb + v_ang_const;
+            v_lin_x_fb = v_lin_x_fb + v_lin_x_const + k_po_ * u_add_x; // abs(theta_error) > M_PI / 3? 0 : 
+            v_lin_y_fb = v_lin_y_fb + v_lin_y_const + k_po_ * u_add_y; // abs(theta_error) > M_PI / 3? 0 : 
 
-            if(v_lin_x_fb < 0)
-                v_lin_x_fb = 0;
+            // if(v_lin_x_fb < 0)
+            //     v_lin_x_fb = 0;
         }
-        else
-        {
-            v_ang_fb = v_ang_fb + v_lin_y_fb + k_po_turn_ * u_add_y + v_ang_const;
-            v_lin_x_fb = v_lin_x_fb + v_lin_x_const + k_po_ * u_add_x;
+        // else
+        // {
+        //     // v_ang_fb = v_ang_fb + v_lin_y_fb + k_po_turn_ * u_add_y + v_ang_const;
+        //     v_lin_x_fb = v_lin_x_fb + v_lin_x_const + k_po_ * u_add_x;
 
-            if (projection_operator && min_dist_ang > - M_PI / 4 && min_dist_ang < M_PI / 4 && min_dist < cfg_->rbt.r_inscr)
-            {
-                v_lin_x_fb = 0;
-                v_ang_fb *= 2;
-            }
+        //     if (projection_operator && min_dist_ang > - M_PI / 4 && min_dist_ang < M_PI / 4 && min_dist < cfg_->rbt.r_inscr)
+        //     {
+        //         v_lin_x_fb = 0;
+        //         // v_ang_fb *= 2;
+        //     }
 
-            v_lin_y_fb = 0;
+        //     v_lin_y_fb = 0;
 
-            if(v_lin_x_fb < 0)
-                v_lin_x_fb = 0;
-        }
+        //     if(v_lin_x_fb < 0)
+        //         v_lin_x_fb = 0;
+        // }
 
         cmd_vel.linear.x = std::max(-cfg_->control.vx_absmax, std::min(cfg_->control.vx_absmax, v_lin_x_fb));
         cmd_vel.linear.y = std::max(-cfg_->control.vy_absmax, std::min(cfg_->control.vy_absmax, v_lin_y_fb));
-        cmd_vel.angular.z = v_ang_fb;
+        // cmd_vel.angular.z = v_ang_fb;
         return cmd_vel;
     }
 

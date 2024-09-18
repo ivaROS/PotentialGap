@@ -39,7 +39,7 @@ namespace potential_gap {
 
             bool setPlan(const std::vector<geometry_msgs::PoseStamped> & plan);
 
-            void initialize(std::string name, tf::TransformListener* tf, costmap_2d::Costmap2DROS* costmap_ros);
+            void initialize(std::string name, tf2_ros::Buffer* tf, costmap_2d::Costmap2DROS* costmap_ros);
 
             void reset();
 

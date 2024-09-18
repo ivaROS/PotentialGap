@@ -28,6 +28,16 @@ namespace potential_gap {
         auto left_ori = gap.convex.convex_lidx * msg.get()->angle_increment + msg.get()->angle_min;
         auto right_ori = gap.convex.convex_ridx * msg.get()->angle_increment + msg.get()->angle_min;
 
+        if (checkGoalVisibility(localgoal)) 
+        {
+            ROS_INFO_STREAM("local goal is visible");
+            gap.goal.x = localgoal.pose.position.x;
+            gap.goal.y = localgoal.pose.position.y;
+            gap.goal.set = true;
+            gap.goal.goalwithin = true;
+            return;
+        }
+
         // Second condition: if angle smaller than M_PI / 3
         // Check if arc length < 3 robot width
         bool gap_size_check = right_ori - left_ori < M_PI;
@@ -67,15 +77,6 @@ namespace potential_gap {
             pow(localgoal.pose.position.x, 2)
         );
 
-        if (checkGoalVisibility(localgoal)) {
-            gap.goal.x = localgoal.pose.position.x;
-            gap.goal.y = localgoal.pose.position.y;
-            gap.goal.set = true;
-            gap.goal.goalwithin = true;
-            return;
-        }
-
-
         gap.goal.x = goal_pt(0);
         gap.goal.y = goal_pt(1);
         gap.goal.set = true;
@@ -83,8 +84,12 @@ namespace potential_gap {
     }
 
     bool GapManipulator::checkGoalVisibility(geometry_msgs::PoseStamped localgoal) {
+        ROS_INFO_STREAM("[checkGoalVisibility]");
+
         boost::mutex::scoped_lock lock(egolock);
         double dist2goal = sqrt(pow(localgoal.pose.position.x, 2) + pow(localgoal.pose.position.y, 2));
+
+        ROS_INFO_STREAM("   dist2goal: " << dist2goal);
 
         auto scan = *msg.get();
         auto min_val = *std::min_element(scan.ranges.begin(), scan.ranges.end());
@@ -103,13 +108,22 @@ namespace potential_gap {
         double goal_angle = std::atan2(localgoal.pose.position.y, localgoal.pose.position.x);
         int incident_angle = (int) round((goal_angle - scan.angle_min) / scan.angle_increment);
 
-        double half_angle = std::asin(cfg_->rbt.r_inscr / dist2goal);
-        // int index = std::ceil(half_angle / scan.angle_increment) * 1.5;
-        int index = (int)(scan.ranges.size()) / 8;
-        int lower_bound = std::max(incident_angle - index, 0);
-        int upper_bound = std::min(incident_angle + index, int(scan.ranges.size() - 1));
-        auto min_val_round_goal = *std::min_element(scan.ranges.begin() + lower_bound, scan.ranges.begin() + upper_bound);
-        return dist2goal < min_val_round_goal;
+        ROS_INFO_STREAM("   incident_angle: " << incident_angle);
+
+        // double half_angle = std::asin(cfg_->rbt.r_inscr / dist2goal);
+        // // int index = std::ceil(half_angle / scan.angle_increment) * 1.5;
+        // int index = (int)(scan.ranges.size()) / 8;
+        // int lower_bound = std::max(incident_angle - index, 0);
+        // int upper_bound = std::min(incident_angle + index, int(scan.ranges.size() - 1));
+        // auto min_val_round_goal = *std::min_element(scan.ranges.begin() + lower_bound, scan.ranges.begin() + upper_bound);
+        
+        float rangeAtGoalIdx = scan.ranges.at(incident_angle);
+
+        ROS_INFO_STREAM("   rangeAtGoalIdx: " << rangeAtGoalIdx);
+
+        ROS_INFO_STREAM("   global goal within: " << (dist2goal < rangeAtGoalIdx));
+
+        return dist2goal < rangeAtGoalIdx;
     }
 
     // In place modification

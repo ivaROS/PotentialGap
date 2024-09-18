@@ -17,7 +17,7 @@ namespace potential_gap{
         state_type x = {curr_pose.pose.position.x + 1e-5, curr_pose.pose.position.y + 1e-6}; 
 
         if (selectedGap.goal.goalwithin) {
-            // ROS_INFO_STREAM("Goal to Goal");
+            ROS_INFO_STREAM("Goal to Goal");
             g2g inte_g2g(
                 selectedGap.goal.x * coefs,
                 selectedGap.goal.y * coefs);

@@ -1,8 +1,11 @@
 PotentialGapPlanner:
+    goal_tolerance: 0.5
+    yaw_goal_tolerance: 3.15 
+    xy_goal_tolerance: .1    
+    
     min_resoln: 1
     gap_diff: 0.1
     global_plan_lookup_increment: 30
-    goal_tolerance: 0.5
     global_plan_change_tolerance: 0.1
     follow_the_gap_visparsing: True
     close_gap_visparsing: True
@@ -34,12 +37,12 @@ PotentialGapPlanner:
     r_norm_offset: 0
 
     synthesized_frame: True
-    scale: 0.8
+    scale: 1.0
     integrate_maxt: 10
     integrate_stept: 0.01
 
     num_feasi_check: 30
-    projection_operator: False
+    projection_operator: True
     holonomic: True
 
     close_gap_vis: False
