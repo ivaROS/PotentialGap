@@ -25,6 +25,7 @@ namespace potential_gap {
             } gap_viz;
 
             struct GapManipulation {
+                bool gap_manip_run;
                 double gap_diff;
                 double epsilon2;
                 double epsilon1;
@@ -127,6 +128,7 @@ namespace potential_gap {
             gap_viz.viz_jitter = 0.1;
             gap_viz.debug_viz = true;
 
+            gap_manip.gap_manip_run = false;
             gap_manip.gap_diff = 0.1;
             gap_manip.epsilon1 = 0.18;
             gap_manip.epsilon2 = 0.18;

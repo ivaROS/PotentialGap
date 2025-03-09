@@ -23,6 +23,7 @@
 #include <tf2_ros/transform_broadcaster.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <potential_gap/robot_geo_parser.h>
+#include <potential_gap/utils.h>
 
 namespace potential_gap{
     class TrajectoryArbiter{

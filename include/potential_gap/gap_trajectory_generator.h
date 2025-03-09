@@ -32,6 +32,42 @@
 #include <potential_gap/utils.h>
 
 namespace potential_gap {
+    inline geometry_msgs::Quaternion yaw2Quat(double yaw)
+    {
+        double roll = 0, pitch = 0;    
+        Eigen::Quaterniond q;
+        q = Eigen::AngleAxisd(roll, Eigen::Vector3d::UnitX())
+            * Eigen::AngleAxisd(pitch, Eigen::Vector3d::UnitY())
+            * Eigen::AngleAxisd(yaw, Eigen::Vector3d::UnitZ());
+        
+        geometry_msgs::Quaternion quat;
+        quat.x = q.x();
+        quat.y = q.y();
+        quat.z = q.z();
+        quat.w = q.w();
+
+        return quat;
+    }
+
+    inline double getTang2Yaw(Bezier::Tangent tang)
+    {
+        double x = tang[0];
+        double y = tang[1];
+        // double yaw;
+        // if(abs(x) < 1e-5 && abs(y) > 1e-5)
+        //     yaw = M_PI / 2;
+        // else
+        //     yaw = atan2(y, x);
+
+        return atan2(y, x);
+    }
+
+    inline geometry_msgs::Quaternion getTang2Quat(Bezier::Tangent tang)
+    {
+        double yaw = getTang2Yaw(tang);
+
+        return yaw2Quat(yaw);
+    }
 
     class gap_traj_fun : public virtual turtlebot_trajectory_generator::desired_traj_func
     {
@@ -49,6 +85,267 @@ namespace potential_gap {
             dxdt[6] = desired_traj.poses[idx - 1].position.x - x[0];
             dxdt[7] = desired_traj.poses[idx - 1].position.y - x[1];
 
+        }
+    };
+
+    struct BezierPoint {
+        double x, y, theta, v, w;
+        int idx;
+        double time;
+        BezierPoint() {};
+        BezierPoint(int idx_in, double time_in, double x_in, double y_in, double theta_in, double v_in, double w_in)
+        {
+            idx = idx_in;
+            time = time_in;
+            x = x_in;
+            y = y_in;
+            theta = theta_in;
+            v = v_in;
+            w = w_in;
+        }
+    };
+
+    class BezierPath {
+    public:
+        std::vector<double> x, y, theta, v, w, time;
+        double delta_t = 0.02;
+        BezierPath() {};
+
+        void add(double x_in, double y_in, double theta_in, double v_in, double w_in)
+        {
+            x.push_back(x_in);
+            y.push_back(y_in);
+            theta.push_back(theta_in);
+            v.push_back(v_in);
+            w.push_back(w_in);
+            int orig_idx = time.size();
+            time.push_back(orig_idx * delta_t);
+        }
+
+        BezierPoint getPoint(int index, double start_time = 0)
+        {
+            if(index < x.size())
+                return BezierPoint(index, start_time + time[index], x[index], y[index], theta[index], v[index], w[index]);
+            else
+            {
+                ROS_ERROR_STREAM("Access [" << index << "] point that is larger than the size of path: [" << x.size() << "].");
+                return BezierPoint();
+            }
+        }
+
+        int size()
+        {
+            return x.size();
+        }
+
+        BezierPoint maxV(int start_idx = 0, int end_idx = -1)
+        {
+            end_idx = end_idx == -1 ? size() - 1 : end_idx;
+            end_idx = end_idx >= size() ? size() - 1 : end_idx;
+
+            auto max_it = std::max_element(v.begin() + start_idx, v.begin() + end_idx + 1);
+            int idx = max_it - v.begin();
+            return getPoint(idx);
+        }
+
+        BezierPoint maxW()
+        {
+            auto max_it = std::max_element(w.begin(), w.end());
+            int idx = max_it - w.begin();
+            return getPoint(idx);
+        }
+
+        void slowDown(double scale, int start_idx = 0, int end_idx = -1)
+        {
+            end_idx = end_idx == -1 ? size() - 1 : end_idx;
+            end_idx = end_idx >= size() ? size() - 1 : end_idx;
+
+            // ROS_INFO_STREAM("slowDown " << start_idx << " " << end_idx << " " << size() << " " << v.size() << " " << w.size());
+
+            // std::transform(v.begin() + start_idx, v.end() + end_idx + 1, v.begin() + start_idx, std::bind(std::multiplies<double>(), std::placeholders::_1, scale));
+            // std::transform(w.begin() + start_idx, w.end() + end_idx + 1, w.begin() + start_idx, std::bind(std::multiplies<double>(), std::placeholders::_1, scale));
+
+            double start_time = time[start_idx];
+            v[start_idx] *= scale;
+            w[start_idx] *= scale;
+            for(int i = start_idx + 1; i <= end_idx; i++)
+            {
+                v[i] *= scale;
+                w[i] *= scale;
+                double cur_delta_t = delta_t / scale;
+                time[i] = start_time + (i - start_idx) * cur_delta_t;
+            }
+        }
+
+        void timeAdjust(int start_idx = 0, int end_idx = -1)
+        {
+            end_idx = end_idx == -1 ? size() - 1 : end_idx;
+            end_idx = end_idx >= size() ? size() - 1 : end_idx;
+
+            double start_time = time[start_idx];
+            for(int i = start_idx + 1; i <= end_idx; i++)
+            {
+                time[i] = start_time + (i - start_idx) * delta_t;
+            }
+        }
+
+        std::vector<geometry_msgs::Pose> toPoseVector()
+        {
+            std::vector<geometry_msgs::Pose> res; 
+            
+            for(int i = 0; i < x.size(); i++)
+            {
+                geometry_msgs::Pose pose;
+                pose.position.x = x[i];
+                pose.position.y = y[i];
+                pose.orientation = yaw2Quat(theta[i]);
+
+                res.push_back(pose);
+            }
+            return res;
+        }
+
+        std::vector<BezierPoint> toBezierPoints(double start_time = 0)
+        {
+            std::vector<BezierPoint> res;
+            for(int i = 0; i < x.size(); i++)
+            {
+                BezierPoint p = getPoint(i, start_time);
+                res.push_back(p);
+            }
+            return res;
+        }
+    };
+
+    class BezierPathProfile {
+    public:
+        std_msgs::Header header;
+        std::vector<BezierPath> bezier_paths;
+
+        BezierPathProfile() {};
+        ~BezierPathProfile() {};
+
+        void addPath(BezierPath& bp)
+        {
+            if(bp.size() != 0)
+                bezier_paths.push_back(bp);
+        }
+
+        void addPaths(std::vector<BezierPath>& bps)
+        {
+            for(auto& a: bps)
+                addPath(a);
+        }
+
+        int size()
+        {
+            return bezier_paths.size();
+        }
+
+        BezierPath getPath(int index)
+        {
+            if(index < bezier_paths.size())
+                return bezier_paths[index];
+            else
+            {
+                ROS_ERROR_STREAM("Access [" << index << "] path that is larger than the size of paths: [" << bezier_paths.size() << "].");
+                return BezierPath();
+            }
+        }
+
+        void timeDilation(double vd, double v_max = 1000, double w_max = 1000)
+        {
+            for(auto& b : bezier_paths)
+            {
+                BezierPoint max_v_pt = b.maxV();
+                if(max_v_pt.v > vd)
+                {
+                    double scale = vd / max_v_pt.v;
+                    b.slowDown(scale);
+                }
+            }
+        }
+
+        void timeDilationSeg(double vd, double v_max = 1000, double w_max = 1000)
+        {
+            int seg_num = 2;
+            for(auto& b : bezier_paths)
+            {
+                int b_seg_size = (int) round(((double) b.size() / seg_num));
+
+                for(int i = 1; i <= seg_num; i++)
+                {
+                    int start_idx = (i - 1) * b_seg_size;
+                    int end_idx = start_idx + b_seg_size;
+
+                    BezierPoint max_v_pt = b.maxV(start_idx, end_idx);
+                    
+                    if(max_v_pt.v > vd)
+                    {
+                        double scale = vd / max_v_pt.v;
+                        b.slowDown(scale, start_idx, end_idx);
+                    }
+                    else
+                        b.timeAdjust(start_idx, end_idx);
+                }
+            }
+        }
+
+        geometry_msgs::PoseArray toPoseArray()
+        {
+            geometry_msgs::PoseArray res;
+            res.header = header;
+
+            if(size() == 0)
+                return res;
+
+            res.poses = bezier_paths[0].toPoseVector();
+
+            if(size() >= 1)
+            {
+                for(int i = 1; i < size(); i++)
+                {
+                    std::vector<geometry_msgs::Pose> cur_poses = bezier_paths[i].toPoseVector();
+                    if(cur_poses.size() > 1)
+                    {
+                        res.poses.pop_back();
+                        res.poses.insert(res.poses.end(), cur_poses.begin(), cur_poses.end());
+                    }
+                }
+            }
+
+            return res;
+        }
+
+        std::vector<BezierPoint> toBezierPoints(double cur_v, double cur_w)
+        {
+            std::vector<BezierPoint> res;
+
+            if(size() == 0)
+                return res;
+
+            res = bezier_paths[0].toBezierPoints();
+            double first_delta_t = res[1].time - res[0].time;
+            double end_time = res[res.size() - 1].time;
+
+            if(size() >= 1)
+            {
+                for(int i = 1; i < size(); i++)
+                {
+                    std::vector<BezierPoint> cur_bpt = bezier_paths[i].toBezierPoints(end_time);
+                    if(cur_bpt.size() > 1)
+                    {
+                        res.pop_back();
+                        res.insert(res.end(), cur_bpt.begin(), cur_bpt.end());
+                    }
+                    end_time = res[res.size() - 1].time;
+                }
+            }
+
+            res[0].v = cur_v;
+            res[0].w = cur_w;
+
+            return res;
         }
     };
 
@@ -110,10 +407,12 @@ namespace potential_gap {
             geometry_msgs::PoseArray forwardPassTrajectory(geometry_msgs::PoseArray);
 
             template<int N>
-            void interpBezierTraj(const Bezier::Bezier<N>& bezier_path, std::vector<geometry_msgs::Pose>& interp_pose);
-            geometry_msgs::Quaternion getTang2Quat(Bezier::Tangent tang);
+            void addToBezierPath(const Bezier::Bezier<N>& bezier_path, const Bezier::Bezier<N-1>& bezier_path_deriv, BezierPath& path, double time, double delta_t);
 
-            geometry_msgs::PoseArray genMultiBezierTrajs(potential_gap::Gap, nav_msgs::Odometry);
+            template<int N>
+            void interpBezierTraj(const Bezier::Bezier<N>& bezier_path, std::vector<geometry_msgs::Pose>& interp_pose);
+
+            geometry_msgs::PoseArray genMultiBezierTrajs(potential_gap::Gap, nav_msgs::Odometry, BezierPathProfile& path_profile);
             bool regulateLocalGoal(const potential_gap::Gap& selectedGap, Eigen::Vector2f& reg_goal);
             Eigen::Vector2f getCircPt(const potential_gap::Gap& selectedGap, const Eigen::Vector2f& local_goal);
             bool robotInitBezierCurve(potential_gap::Gap, const Eigen::Vector2f& circ_pt, Bezier::Bezier<3>&, Eigen::Vector2f& cp2, nav_msgs::Odometry);

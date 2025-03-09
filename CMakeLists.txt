@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(potential_gap)
 
-## Compile as C++17, supported in ROS noetic and newer
+## Compile as C++11, supported in ROS Kinetic and newer
 add_compile_options(-std=c++17)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fopenmp")
@@ -60,12 +60,16 @@ include_directories(
   SYSTEM ${EIGEN3_INCLUDE_DIRS}
   include
   ${catkin_INCLUDE_DIRS}
-  ${YAML_CPP_INCLUDE_DIR}
+  ${YAML_CPP_INCLUDE_DIRS}
 )
 
 add_message_files(
   FILES
   TrajPlan.msg
+  GapArray.msg
+  GapGoalModes.msg
+  GapInfo.msg
+  GapSide.msg
 )
 
 generate_messages(
@@ -75,7 +79,7 @@ generate_messages(
 )
 
 catkin_package(
-  INCLUDE_DIRS include ${EIGEN3_INCLUDE_DIRS} ${YAML_CPP_INCLUDE_DIR}
+  INCLUDE_DIRS include ${EIGEN3_INCLUDE_DIRS} ${YAML_CPP_INCLUDE_DIRS}
   LIBRARIES potential_gap_ros potential_gap_core potential_gap_planner
   INCLUDE_DIRS ${EIGEN3_INCLUDE_DIRS}
   DEPENDS OpenMP yaml-cpp

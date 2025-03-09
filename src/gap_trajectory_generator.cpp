@@ -689,7 +689,7 @@ namespace potential_gap{
         }
     }
 
-    geometry_msgs::PoseArray GapTrajGenerator::genMultiBezierTrajs(potential_gap::Gap selectedGap, nav_msgs::Odometry curr_odom)
+    geometry_msgs::PoseArray GapTrajGenerator::genMultiBezierTrajs(potential_gap::Gap selectedGap, nav_msgs::Odometry curr_odom, BezierPathProfile& path_profile)
     {
         geometry_msgs::PoseArray posearr;
         posearr.header.stamp = ros::Time::now();
@@ -757,13 +757,25 @@ namespace potential_gap{
         {
             if(!cfg_->traj.bezier_interp)
             {
-                for(float t = 0; t <= 1; t+=0.02)
+                BezierPath init_bp, goal_bp;
+                double delta_t = 0.05;
+                init_bp.delta_t = delta_t;
+                goal_bp.delta_t = delta_t;
+
+                Bezier::Bezier<2> d_init_bezier = init_bezier.derivative();
+                Bezier::Bezier<1> d_goal_bezier;
+                if(!goal_within && !local_goal_within)
+                    d_goal_bezier = goal_bezier.derivative();
+
+                for(float t = 0; t <= 1; t+=delta_t)
                 {
                     geometry_msgs::Pose init_pose;
                     init_pose.position.x = init_bezier.valueAt(t, 0);
                     init_pose.position.y = init_bezier.valueAt(t, 1);
                     init_pose.orientation = getTang2Quat(init_bezier.tangentAt(t));
                     init_poses.push_back(init_pose);
+
+                    addToBezierPath<3>(init_bezier, d_init_bezier, init_bp, t, delta_t);
 
                     if(!goal_within && !local_goal_within)
                     {
@@ -772,8 +784,12 @@ namespace potential_gap{
                         goal_pose.position.y = goal_bezier.valueAt(t, 1);
                         goal_pose.orientation = getTang2Quat(goal_bezier.tangentAt(t));
                         goal_poses.push_back(goal_pose);
+
+                        addToBezierPath<2>(goal_bezier, d_goal_bezier, goal_bp, t, delta_t);
                     }
                 }
+                std::vector<BezierPath> bps{init_bp, goal_bp};
+                path_profile.addPaths(bps);
             }
             else
             {
@@ -999,6 +1015,11 @@ namespace potential_gap{
         init_bezier = Bezier::Bezier<3>({ {cp0(0), cp0(1)}, {cp1(0), cp1(1)}, 
                                           {cp2(0), cp2(1)}, {cp3(0), cp3(1)} });
 
+        // Bezier::Tangent tang = init_bezier.tangentAt(0, false);
+        // double cal_v = sqrt(tang[0] * tang[0] + tang[1] * tang[1]);
+        // if(abs(cal_v - x_speed) > 1e-4)
+        //     ROS_ERROR_STREAM("cal_v: " << cal_v << ", x_speed: " << x_speed);
+
         return true;
     }
 
@@ -1079,6 +1100,31 @@ namespace potential_gap{
 
         return true;
     }
+
+    template<int N>
+    void GapTrajGenerator::addToBezierPath(const Bezier::Bezier<N>& bezier_path, const Bezier::Bezier<N-1>& bezier_path_deriv, BezierPath& path, double time, double delta_t)
+    {
+        double cur_yaw = getTang2Yaw(bezier_path.tangentAt(time));
+        double w;
+        if(time < 1)
+        {
+            double next_time = std::min(time + delta_t, 1.);
+            double next_yaw = getTang2Yaw(bezier_path.tangentAt(next_time));
+            w = (next_yaw - cur_yaw) / (next_time - time);
+        }
+        else if(time == 1)
+        {
+            w = 0;
+        }
+        else
+            return;
+
+        double v_x = bezier_path_deriv.valueAt(time, 0);
+        double v_y = bezier_path_deriv.valueAt(time, 1);
+        double v = sqrt(v_x * v_x + v_y * v_y);
+
+        path.add(bezier_path.valueAt(time, 0), bezier_path.valueAt(time, 1), cur_yaw, v, w);
+    }
     
     template<int N>
     void GapTrajGenerator::interpBezierTraj(const Bezier::Bezier<N>& bezier_path, std::vector<geometry_msgs::Pose>& interp_pose)
@@ -1151,28 +1197,6 @@ namespace potential_gap{
 
     template void GapTrajGenerator::interpBezierTraj<2>(const Bezier::Bezier<2>& bezier_path, std::vector<geometry_msgs::Pose>& interp_pose);
     template void GapTrajGenerator::interpBezierTraj<3>(const Bezier::Bezier<3>& bezier_path, std::vector<geometry_msgs::Pose>& interp_pose);
-
-    geometry_msgs::Quaternion GapTrajGenerator::getTang2Quat(Bezier::Tangent tang)
-    {
-        double x = tang[0];
-        double y = tang[1];
-
-        double yaw = atan2(y, x);
-
-        double roll = 0, pitch = 0;    
-        Eigen::Quaterniond q;
-        q = Eigen::AngleAxisd(roll, Eigen::Vector3d::UnitX())
-            * Eigen::AngleAxisd(pitch, Eigen::Vector3d::UnitY())
-            * Eigen::AngleAxisd(yaw, Eigen::Vector3d::UnitZ());
-        
-        geometry_msgs::Quaternion quat;
-        quat.x = q.x();
-        quat.y = q.y();
-        quat.z = q.z();
-        quat.w = q.w();
-
-        return quat;
-    }
 
     geometry_msgs::PoseArray GapTrajGenerator::transformBackTrajectory(
         geometry_msgs::PoseArray posearr,

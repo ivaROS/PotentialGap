@@ -171,7 +171,8 @@ namespace potential_gap {
         double dist2goal = sqrt(pow(localgoal.pose.position.x, 2) + pow(localgoal.pose.position.y, 2));
 
         auto scan = *msg.get();
-        auto min_val = *std::min_element(scan.ranges.begin(), scan.ranges.end());
+        auto min_val = *std::min_element(scan.ranges.begin(), scan.ranges.end(), min_element_comp);
+        min_val = isnan(min_val) ? LASER_ORIG_MAX_RANGE_ : min_val;
 
         // If sufficiently close to robot
         Eigen::Vector2d orient_vec(1, 0);
@@ -196,7 +197,8 @@ namespace potential_gap {
         int index = (int)(scan.ranges.size()) / 8;
         int lower_bound = std::max(incident_angle - index, 0);
         int upper_bound = std::min(incident_angle + index, int(scan.ranges.size() - 1));
-        auto min_val_round_goal = *std::min_element(scan.ranges.begin() + lower_bound, scan.ranges.begin() + upper_bound);
+        auto min_val_round_goal = *std::min_element(scan.ranges.begin() + lower_bound, scan.ranges.begin() + upper_bound, min_element_comp);
+        min_val_round_goal = isnan(min_val_round_goal) ? LASER_ORIG_MAX_RANGE_ : min_val_round_goal;
         return dist2goal < min_val_round_goal;
     }
 
@@ -386,8 +388,13 @@ namespace potential_gap {
 
         try{
             for (int i = 0; i < min_dist.size(); i++) {
-                float dist_sq = pow(near_dist, 2) + pow(stored_scan_msgs.ranges.at(i + offset), 2) -
-                    2 * near_dist * stored_scan_msgs.ranges.at(i + offset) * cos((i + offset - near_idx) * stored_scan_msgs.angle_increment);
+                double tmp_dist;
+                if(isnan(stored_scan_msgs.ranges.at(i + offset)))
+                    tmp_dist = LASER_ORIG_MAX_RANGE_;
+                else
+                    tmp_dist = stored_scan_msgs.ranges.at(i + offset);
+                float dist_sq = pow(near_dist, 2) + pow(tmp_dist, 2) -
+                    2 * near_dist * tmp_dist * cos((i + offset - near_idx) * stored_scan_msgs.angle_increment);
                 if(dist_sq < 0)
                     min_dist.at(i) = 0;
                 else
@@ -892,9 +899,10 @@ namespace potential_gap {
         auto end_it = msg.get()->ranges.begin() + idx2 + 1;
         std::vector<float> sub_scan(start_it, end_it);
 
-        auto min_dist_it = min_element(sub_scan.begin(), sub_scan.end());
+        auto min_dist_it = min_element(sub_scan.begin(), sub_scan.end(), min_element_comp);
         int min_dist_idx = min_dist_it - sub_scan.begin();
         float min_dist = *min_dist_it;
+        min_dist = isnan(min_dist) ? LASER_ORIG_MAX_RANGE_ : min_dist;
         
         float min_diff_ang = min_dist_idx * angle_increment;
         float min_dist_ang = min_diff_ang + angl;
@@ -958,6 +966,7 @@ namespace potential_gap {
         for(size_t i = 0; i < sub_scan.size(); i++)
         {
             float dist_i = sub_scan[i];
+            dist_i = isnan(dist_i) ? LASER_ORIG_MAX_RANGE_ : dist_i;
             float ang_i = i + angle_increment + angl;
             Eigen::Vector2f i_vec(cos(ang_i), sin(ang_i));
 

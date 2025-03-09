@@ -24,6 +24,7 @@ namespace potential_gap {
         // ROS_INFO_STREAM("Max Dist: " << max_scan_dist << ", min dist: " << min_dist);
         int gap_size = 0;
         std::string frame = stored_scan_msgs.header.frame_id;
+        ros::Time stamp = stored_scan_msgs.header.stamp;
         int gap_lidx = 0;
         float gap_ldist = stored_scan_msgs.ranges[0];
         float last_scan = stored_scan_msgs.ranges[0];
@@ -44,7 +45,7 @@ namespace potential_gap {
                 // If both current and last values are not infinity, meaning this is not a swept gap
                 if (scan_dist < max_scan_dist && last_scan < max_scan_dist) 
                 {
-                    potential_gap::Gap detected_gap(frame, it - 1, last_scan, true, half_scan);
+                    potential_gap::Gap detected_gap(stamp, frame, it - 1, last_scan, true, half_scan);
                     detected_gap.addRightInformation(it, scan_dist);
                     detected_gap.setMinSafeDist(min_dist);
                     // Inscribed radius gets enforced here, or unless using inflated egocircle,
@@ -66,7 +67,7 @@ namespace potential_gap {
                 if (prev_lgap)
                 {
                     prev_lgap = false;
-                    potential_gap::Gap detected_gap(frame, gap_lidx, gap_ldist, half_scan);
+                    potential_gap::Gap detected_gap(stamp, frame, gap_lidx, gap_ldist, half_scan);
                     detected_gap.addRightInformation(it, scan_dist);
                     detected_gap.setMinSafeDist(min_dist);
                     // Inscribed radius gets enforced here, or unless using inflated egocircle,
@@ -92,7 +93,7 @@ namespace potential_gap {
         if (prev_lgap) 
         {
             // ROS_INFO_STREAM("catching last gap");
-            potential_gap::Gap detected_gap(frame, gap_lidx, gap_ldist, half_scan);
+            potential_gap::Gap detected_gap(stamp, frame, gap_lidx, gap_ldist, half_scan);
             detected_gap.addRightInformation(int(stored_scan_msgs.ranges.size() - 1), *(stored_scan_msgs.ranges.end() - 1));
             detected_gap.setMinSafeDist(min_dist);
             Eigen::Vector2d orient_vec(1, 0);
@@ -145,7 +146,7 @@ namespace potential_gap {
                 // End of Gap
                 if (scan_diff < -0.2) 
                 {
-                    potential_gap::Gap detected_gap(cfg_->sensor_frame_id, gap_lidx, gap_ldist);
+                    potential_gap::Gap detected_gap(stored_scan_msgs.header.stamp, cfg_->sensor_frame_id, gap_lidx, gap_ldist);
                     detected_gap.addRightInformation(it - 1, scan_dist);
                     observed_gaps.push_back(detected_gap);
                     prev = false;
@@ -166,7 +167,7 @@ namespace potential_gap {
 
         if (prev)
         {
-            potential_gap::Gap detected_gap(cfg_->sensor_frame_id, gap_lidx, gap_ldist);
+            potential_gap::Gap detected_gap(stored_scan_msgs.header.stamp, cfg_->sensor_frame_id, gap_lidx, gap_ldist);
             detected_gap.addRightInformation(511, stored_scan_msgs.ranges[511]);
             observed_gaps.push_back(detected_gap);
         }
@@ -228,7 +229,7 @@ namespace potential_gap {
                 }
                 
                 if (scan_diff > 0.2) {
-                    potential_gap::Gap detected_gap(cfg_->sensor_frame_id, it - 1, last_scan);
+                    potential_gap::Gap detected_gap(stored_scan_msgs.header.stamp, cfg_->sensor_frame_id, it - 1, last_scan);
                     min_dist = 3;
                     detected_gap.addRightInformation(it, scan_dist);
                     left_gap.push_back(detected_gap);
@@ -239,7 +240,7 @@ namespace potential_gap {
             {
                 if (type2start && last_scan > max_scan_dist - 0.01) 
                 {
-                    potential_gap::Gap detected_gap(cfg_->sensor_frame_id, gap_lidx, gap_ldist);
+                    potential_gap::Gap detected_gap(stored_scan_msgs.header.stamp, cfg_->sensor_frame_id, gap_lidx, gap_ldist);
                     detected_gap.addRightInformation(it, scan_dist);
                     central_gap.push_back(detected_gap);
                     // ROS_INFO_STREAM("start " << gap_lidx << ", end " << it);
@@ -268,7 +269,7 @@ namespace potential_gap {
             if (scan_diff > 0.2 && scan_dist < max_scan_dist - 0.1) 
             {
                 min_dist = 3;
-                potential_gap::Gap detected_gap(cfg_->sensor_frame_id, it, scan_dist);
+                potential_gap::Gap detected_gap(stored_scan_msgs.header.stamp, cfg_->sensor_frame_id, it, scan_dist);
                 detected_gap.addRightInformation(it + 1, last_scan);
                 right_gap.push_back(detected_gap);
             }

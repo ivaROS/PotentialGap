@@ -16,6 +16,9 @@
 #include <std_msgs/Header.h>
 #include "nav_msgs/Odometry.h"
 #include "potential_gap/TrajPlan.h"
+#include "potential_gap/GapArray.h"
+#include "potential_gap/GapInfo.h"
+#include "potential_gap/GapSide.h"
 #include <potential_gap/helper.h>
 #include <potential_gap/gap.h>
 #include <potential_gap/trajectory_follower.h>
@@ -105,6 +108,7 @@ namespace potential_gap
         bool pf_local_frame_enable_;
 
         static constexpr float OFFSET=0;
+        
     private:
         geometry_msgs::TransformStamped map2rbt;        // Transform
         geometry_msgs::TransformStamped rbt2map;
@@ -129,10 +133,12 @@ namespace potential_gap
         ros::Publisher local_traj_pub;
         ros::Publisher trajectory_pub;
         ros::Publisher gap_vis_pub;
+        ros::Publisher observed_gap_pub;
         ros::Publisher selected_gap_vis_pub;
         ros::Publisher ni_traj_pub;
         ros::Publisher ni_traj_pub_other;
 
+        ros::Publisher preprocess_laser_pub;
         ros::Publisher transformed_laser_pub;
         ros::Publisher virtual_orient_traj_pub;
 
@@ -258,6 +264,9 @@ namespace potential_gap
 
         boost::shared_ptr<sensor_msgs::LaserScan const> transformLaserToRbt(boost::shared_ptr<sensor_msgs::LaserScan const> msg);
 
+        boost::shared_ptr<sensor_msgs::LaserScan const> preprocessLaser(boost::shared_ptr<sensor_msgs::LaserScan const> msg);
+        boost::shared_ptr<sensor_msgs::LaserScan const> postprocessLaser(boost::shared_ptr<sensor_msgs::LaserScan const> msg);
+
         /**
          * call back function to pose, pose information obtained here only used when a new goal is used
          * @param msg pose msg
@@ -317,7 +326,8 @@ namespace potential_gap
          * 
          *
          */
-        std::vector<std::vector<double>> initialTrajGen(std::vector<potential_gap::Gap>, std::vector<geometry_msgs::PoseArray>&, std::vector<geometry_msgs::PoseArray>& virtual_decayed);
+        std::vector<std::vector<double>> initialTrajGen(std::vector<potential_gap::Gap>, std::vector<geometry_msgs::PoseArray>&, std::vector<geometry_msgs::PoseArray>& virtual_decayed, 
+                                                        std::vector<BezierPathProfile>* full_bezier_path = nullptr);
 
         /**
          * Callback function to config object
@@ -332,7 +342,7 @@ namespace potential_gap
          * @param Vector of corresponding trajectory scores
          * @return the best trajectory
          */
-        geometry_msgs::PoseArray pickTraj(std::vector<geometry_msgs::PoseArray>, std::vector<std::vector<double>>, std::vector<potential_gap::Gap>, std::vector<geometry_msgs::PoseArray> virtual_path, geometry_msgs::PoseArray& chosen_virtual_path);
+        geometry_msgs::PoseArray pickTraj(std::vector<geometry_msgs::PoseArray>, std::vector<std::vector<double>>, std::vector<potential_gap::Gap>, std::vector<geometry_msgs::PoseArray> virtual_path, geometry_msgs::PoseArray& chosen_virtual_path, int* pikced_id = nullptr);
 
         /**
          * Compare to the old trajectory and pick the best one

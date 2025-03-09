@@ -19,6 +19,20 @@
 #include <geometry_msgs/Point.h>
 
 namespace potential_gap {
+    static constexpr double LASER_ORIG_MAX_RANGE_ = 3;
+
+    inline bool min_element_comp(const float& A, const float& B)
+    {
+        if(isnan(A) && isnan(B))
+            return true;
+        else if(isnan(A) && !isnan(B))
+            return false;
+        else if(!isnan(A) && isnan(B))
+            return true;
+        else
+            return A < B;
+    }
+
 namespace utils {
     constexpr auto float_inf = std::numeric_limits<float>::infinity();
 

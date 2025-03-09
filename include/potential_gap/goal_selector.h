@@ -19,6 +19,7 @@
 #include <sensor_msgs/LaserScan.h>
 #include <boost/shared_ptr.hpp>
 #include <potential_gap/robot_geo_parser.h>
+#include <potential_gap/utils.h>
 
 namespace potential_gap
 {

@@ -142,15 +142,15 @@ namespace potential_gap {
         Eigen::Vector2d pose_vec(pose.position.x, pose.position.y); // TODO: pose should be in robot frame
         double pose_angle = atan2(pose_vec[1], pose_vec[0]);
         int pose_idx = int(round((pose_angle - stored_scan.angle_min) / stored_scan.angle_increment));
-        pose_idx = pose_idx >= 0 ? pose_idx : 0;
-        pose_idx = pose_idx < stored_scan.ranges.size() ? pose_idx : (stored_scan.ranges.size() - 1);
+        pose_idx = pose_idx < 0 ? 0 : pose_idx;
+        pose_idx = pose_idx >= (int) stored_scan.ranges.size() ? (stored_scan.ranges.size() - 1) : pose_idx;
         float pose_ego_dist = stored_scan.ranges[pose_idx];
-        if(pose_vec.norm() >= pose_ego_dist)
+        if(!isnan(pose_ego_dist) && pose_vec.norm() >= pose_ego_dist)
             return -std::numeric_limits<double>::infinity();
 
         for (int i = 0; i < dist.size(); i++) {
             float this_dist = stored_scan.ranges.at(i);
-            this_dist = this_dist == 3 ? this_dist + cfg_->traj.rmax : this_dist;
+            this_dist = isnan(this_dist) ? LASER_ORIG_MAX_RANGE_ + cfg_->traj.rmax : this_dist;
 
             // Iterate through robot boundary
             

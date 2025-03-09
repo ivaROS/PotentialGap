@@ -233,7 +233,7 @@ namespace potential_gap{
                 float dist = inflated_egocircle.ranges.at(i);
                 min_dist_arr.at(i) = dist2Pose(angle, dist, init_pose.pose);
             }
-            int min_idx = std::min_element( min_dist_arr.begin(), min_dist_arr.end() ) - min_dist_arr.begin();
+            int min_idx = std::min_element( min_dist_arr.begin(), min_dist_arr.end(), min_element_comp) - min_dist_arr.begin();
 
             // ROS_INFO_STREAM("Local Line Start");
             std::vector<geometry_msgs::Point> vec = findLocalLine(min_idx);
@@ -270,6 +270,8 @@ namespace potential_gap{
             last_time = ros::Time::now();
             float r_max = r_norm + r_norm_offset;
             min_dist = (float) min_dist_arr.at(min_idx);
+            min_idx = isnan(min_dist) ? inflated_egocircle.ranges.size() / 2 : min_idx;
+            min_dist = isnan(min_dist) ? LASER_ORIG_MAX_RANGE_ : min_dist;
             min_dist = min_dist >= r_max ? r_max : min_dist;
             if (min_dist <= 0) ROS_INFO_STREAM("Min dist <= 0, : " << min_dist);
             min_dist = min_dist <= 0 ? 0.01 : min_dist;

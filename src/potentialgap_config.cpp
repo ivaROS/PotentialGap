@@ -17,6 +17,7 @@ namespace potential_gap {
         nh.param("debug_viz", gap_viz.debug_viz, gap_viz.debug_viz);
 
         // Gap Manipulation
+        nh.param("gap_manip_run", gap_manip.gap_manip_run, gap_manip.gap_manip_run);
         nh.param("gap_diff", gap_manip.gap_diff, gap_manip.gap_diff);
         nh.param("epsilon2", gap_manip.epsilon2, gap_manip.epsilon2);
         nh.param("epsilon1", gap_manip.epsilon1, gap_manip.epsilon1);
@@ -102,6 +103,7 @@ namespace potential_gap {
         gap_viz.debug_viz = cfg.debug_viz;
 
         // Gap Manipulation
+        gap_manip.gap_manip_run = cfg.gap_manip_run;
         gap_manip.gap_diff = cfg.gap_diff;
         gap_manip.epsilon2 = cfg.epsilon2;
         gap_manip.epsilon1 = cfg.epsilon1;

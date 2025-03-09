@@ -108,7 +108,13 @@ namespace potential_gap {
         Eigen::Vector2d orient_vec(1, 0);
         double buffer_length = robot_geo_proc_.getLinearDecayEquivalentRL(orient_vec, pose_vec, pose_vec.norm());
         // bool check = dist2rbt(pose) >= (double (stored_scan_msgs.ranges.at(laserScanIdx)) - buffer_length);
-        bool check = dist2rbt(pose) >= (double (stored_scan_msgs.ranges.at(laserScanIdx)) - buffer_length / 2);
+        double check_dist;
+        if(isnan(stored_scan_msgs.ranges.at(laserScanIdx)))
+            check_dist = LASER_ORIG_MAX_RANGE_;
+        else
+            check_dist = double (stored_scan_msgs.ranges.at(laserScanIdx));
+        check_dist = check_dist - buffer_length / 2;
+        bool check = dist2rbt(pose) >= check_dist;
         // bool check = dist2rbt(pose) >= (double (stored_scan_msgs.ranges.at(laserScanIdx)));
         return check;
     }
@@ -122,8 +128,13 @@ namespace potential_gap {
         double buffer_length = robot_geo_proc_.getLinearDecayEquivalentRL(orient_vec, pose_vec, pose_vec.norm());
         // bool check = dist2rbt(pose) < (double (stored_scan_msgs.ranges.at(laserScanIdx)) - buffer_length) || 
         //     dist2rbt(pose) > (double (stored_scan_msgs.ranges.at(laserScanIdx)) + epsilon2 * 2);
-        bool check = dist2rbt(pose) < (double (stored_scan_msgs.ranges.at(laserScanIdx)) - buffer_length / 2) || 
-            dist2rbt(pose) > (double (stored_scan_msgs.ranges.at(laserScanIdx)) + epsilon2 * 2);
+        double check_dist;
+        if(isnan(stored_scan_msgs.ranges.at(laserScanIdx)))
+            check_dist = LASER_ORIG_MAX_RANGE_;
+        else
+            check_dist = double (stored_scan_msgs.ranges.at(laserScanIdx));
+        bool check = dist2rbt(pose) < (check_dist - buffer_length / 2) || 
+            dist2rbt(pose) > (check_dist + epsilon2 * 2);
         return check;
     }
 
@@ -159,7 +170,8 @@ namespace potential_gap {
         }
 
         sensor_msgs::LaserScan stored_scan_msgs = *sharedPtr_laser.get();
-        threshold = (double) *std::max_element(stored_scan_msgs.ranges.begin(), stored_scan_msgs.ranges.end());
+        threshold = (double) *std::max_element(stored_scan_msgs.ranges.begin(), stored_scan_msgs.ranges.end(), min_element_comp);
+        threshold = isnan(threshold) ? LASER_ORIG_MAX_RANGE_ : threshold;
 
         // Find closest pose to robot
         auto start_pose = std::min_element(distance.begin(), distance.end());
@@ -201,7 +213,8 @@ namespace potential_gap {
         }
 
         sensor_msgs::LaserScan stored_scan_msgs = *sharedPtr_laser.get();
-        threshold = (double) *std::max_element(stored_scan_msgs.ranges.begin(), stored_scan_msgs.ranges.end());
+        threshold = (double) *std::max_element(stored_scan_msgs.ranges.begin(), stored_scan_msgs.ranges.end(), min_element_comp);
+        threshold = isnan(threshold) ? LASER_ORIG_MAX_RANGE_ : threshold;
 
         // Find closest pose to robot
         auto start_pose = std::min_element(distance.begin(), distance.end());

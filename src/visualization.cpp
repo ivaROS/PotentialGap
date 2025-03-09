@@ -80,20 +80,27 @@ namespace potential_gap{
         // ROS_INFO_STREAM(g._left_idx << ", " << g._ldist << ", " << g._right_idx << ", " << g._rdist << ", " << g._frame);
         if (!cfg_->gap_viz.debug_viz) return;
 
+        // if((g._right_idx - g._left_idx) > 400 && (ns == "trans"))
+        // {
+        //     ROS_ERROR_STREAM("Wrong gap over half of the circle. [" << ns << "]");
+        //     throw;
+        // }
+
         int viz_offset = 0;
         double viz_jitter = cfg_->gap_viz.viz_jitter;
         if (viz_jitter > 0 && g.isAxial()){
             viz_offset = g.isLeftType() ? -2 : 2;
         }
 
-        int num_gaps = (g._right_idx - g._left_idx) / cfg_->gap_viz.min_resoln + 1;
+        int num_gaps = int(round(float(g._right_idx - g._left_idx) / cfg_->gap_viz.min_resoln));
         float dist_step = (g._rdist - g._ldist) / num_gaps;
         int sub_gap_lidx = g._left_idx + viz_offset;
         float sub_gap_ldist = g._ldist;
 
         visualization_msgs::Marker this_marker;
         this_marker.header.frame_id = g._frame;
-        this_marker.header.stamp = ros::Time();
+        // this_marker.header.stamp = ros::Time();
+        this_marker.header.stamp = g._stamp;
         this_marker.ns = ns;
         this_marker.type = visualization_msgs::Marker::LINE_STRIP;
         this_marker.action = visualization_msgs::Marker::ADD;
@@ -112,65 +119,306 @@ namespace potential_gap{
             return;
         }
 
-        this_marker.colors = color_value->second;
+        // this_marker.colors = color_value->second;
         double thickness = cfg_->gap_viz.fig_gen ? 0.2 : 0.01;
         this_marker.scale.x = 0.05;
         this_marker.scale.y = 0.05;
         this_marker.scale.z = 0.05;
         bool finNamespace = (ns.compare("fin") == 0);
 
-        geometry_msgs::Point linel;
-        geometry_msgs::Point liner;
-        std::vector<geometry_msgs::Point> lines;
+        // geometry_msgs::Point linel;
+        // geometry_msgs::Point liner;
+        // std::vector<geometry_msgs::Point> lines;
+        geometry_msgs::Point line_pt;
+        std::vector<geometry_msgs::Point> line_list;
+        std_msgs::ColorRGBA c_color = color_value->second.at(0);
+        std::vector<std_msgs::ColorRGBA> color_list;
 
         if (finNamespace) {
-            this_marker.colors.at(0).a = 1;
-            this_marker.colors.at(1).a = 1;
-            linel.z = 0.1;
-            liner.z = 0.1;
+            // this_marker.colors.at(0).a = 1;
+            // this_marker.colors.at(1).a = 1;
+            // linel.z = 0.1;
+            // liner.z = 0.1;
+            c_color.a = 1;
+            line_pt.z = 0.1;
         }
 
         int id = (int) vis_arr.markers.size();
 
-        for (int i = 0; i < num_gaps - 1; i++)
+        if(viz_offset != 0)
         {
-            lines.clear();
-            linel.x = (sub_gap_ldist + viz_jitter) * cos(-( (float) g.half_scan - sub_gap_lidx) / g.half_scan * M_PI);
-            linel.y = (sub_gap_ldist + viz_jitter) * sin(-( (float) g.half_scan - sub_gap_lidx) / g.half_scan * M_PI);
-            sub_gap_lidx += cfg_->gap_viz.min_resoln;
-            sub_gap_ldist += dist_step;
-            liner.x = (sub_gap_ldist + viz_jitter) * cos(-( (float) g.half_scan - sub_gap_lidx) / g.half_scan * M_PI);
-            liner.y = (sub_gap_ldist + viz_jitter) * sin(-( (float) g.half_scan - sub_gap_lidx) / g.half_scan * M_PI);
-            lines.push_back(linel);
-            lines.push_back(liner);
+            line_pt.x = (sub_gap_ldist + viz_jitter) * cos(-( (float) g.half_scan - sub_gap_lidx) / g.half_scan * M_PI);
+            line_pt.y = (sub_gap_ldist + viz_jitter) * sin(-( (float) g.half_scan - sub_gap_lidx) / g.half_scan * M_PI);
+            line_list.push_back(line_pt);
 
-            this_marker.points = lines;
-            this_marker.id = id++;
-            this_marker.lifetime = ros::Duration(g.life_time);
-            vis_arr.markers.push_back(this_marker);
+            color_list.push_back(c_color);
         }
 
-        // close the last
-        lines.clear();
-        linel.x = (sub_gap_ldist + viz_jitter) * cos(-( (float) g.half_scan - sub_gap_lidx) / g.half_scan * M_PI);
-        linel.y = (sub_gap_ldist + viz_jitter) * sin(-( (float) g.half_scan - sub_gap_lidx) / g.half_scan * M_PI);
-        liner.x = (g._rdist + viz_jitter) * cos(-( (float) g.half_scan - g._right_idx) / g.half_scan * M_PI);
-        liner.y = (g._rdist + viz_jitter) * sin(-( (float) g.half_scan - g._right_idx) / g.half_scan * M_PI);
-        lines.push_back(linel);
-        lines.push_back(liner);
-        this_marker.points = lines;
-        this_marker.id = id++;
-        this_marker.lifetime = ros::Duration(g.life_time);
+        for(size_t i = 0; i < num_gaps; i++)
+        {
+            int current_idx = sub_gap_lidx + i * cfg_->gap_viz.min_resoln;
+            float current_dist =  sub_gap_ldist + i * dist_step;
+            if(current_idx <= g._right_idx)
+            {
+                line_pt.x = (current_dist + viz_jitter) * cos(-( (float) g.half_scan - current_idx) / g.half_scan * M_PI);
+                line_pt.y = (current_dist + viz_jitter) * sin(-( (float) g.half_scan - current_idx) / g.half_scan * M_PI);
+                line_list.push_back(line_pt);
+
+                color_list.push_back(c_color);
+            }
+        }
+
+        line_pt.x = (g._rdist + viz_jitter) * cos(-( (float) g.half_scan - g._right_idx) / g.half_scan * M_PI);
+        line_pt.y = (g._rdist + viz_jitter) * sin(-( (float) g.half_scan - g._right_idx) / g.half_scan * M_PI);
+        line_list.push_back(line_pt);
+        color_list.push_back(c_color);
+
+        this_marker.points = line_list;
+        this_marker.colors = color_list;
+        this_marker.id = id + 1;
+        // this_marker.lifetime = ros::Duration(g.life_time);
+        this_marker.lifetime = ros::Duration(0.1);
         vis_arr.markers.push_back(this_marker);
+
+        // for (int i = 0; i < num_gaps - 1; i++)
+        // {
+        //     if(sub_gap_lidx < g._right_idx)
+        //     {
+        //         lines.clear();
+        //         linel.x = (sub_gap_ldist + viz_jitter) * cos(-( (float) g.half_scan - sub_gap_lidx) / g.half_scan * M_PI);
+        //         linel.y = (sub_gap_ldist + viz_jitter) * sin(-( (float) g.half_scan - sub_gap_lidx) / g.half_scan * M_PI);
+        //         sub_gap_lidx += cfg_->gap_viz.min_resoln;
+        //         sub_gap_ldist += dist_step;
+        //         liner.x = (sub_gap_ldist + viz_jitter) * cos(-( (float) g.half_scan - sub_gap_lidx) / g.half_scan * M_PI);
+        //         liner.y = (sub_gap_ldist + viz_jitter) * sin(-( (float) g.half_scan - sub_gap_lidx) / g.half_scan * M_PI);
+        //         lines.push_back(linel);
+        //         lines.push_back(liner);
+
+        //         this_marker.points = lines;
+        //         this_marker.id = id++;
+        //         // this_marker.lifetime = ros::Duration(g.life_time);
+        //         this_marker.lifetime = ros::Duration(0);
+        //         vis_arr.markers.push_back(this_marker);
+        //     }
+        // }
+
+        // // close the last
+        // lines.clear();
+        // linel.x = (sub_gap_ldist + viz_jitter) * cos(-( (float) g.half_scan - sub_gap_lidx) / g.half_scan * M_PI);
+        // linel.y = (sub_gap_ldist + viz_jitter) * sin(-( (float) g.half_scan - sub_gap_lidx) / g.half_scan * M_PI);
+        // liner.x = (g._rdist + viz_jitter) * cos(-( (float) g.half_scan - g._right_idx) / g.half_scan * M_PI);
+        // liner.y = (g._rdist + viz_jitter) * sin(-( (float) g.half_scan - g._right_idx) / g.half_scan * M_PI);
+        // lines.push_back(linel);
+        // lines.push_back(liner);
+        // this_marker.points = lines;
+        // this_marker.id = id++;
+        // // this_marker.lifetime = ros::Duration(g.life_time);
+        // this_marker.lifetime = ros::Duration(0);
+        // vis_arr.markers.push_back(this_marker);
     }
     
-    void GapVisualizer::drawGaps(std::vector<potential_gap::Gap> g, std::string ns, std::string color) {
+    void GapVisualizer::drawGaps(std::vector<potential_gap::Gap>& g, std::string ns, std::string color) {
         if (!cfg_->gap_viz.debug_viz) return;
         visualization_msgs::MarkerArray vis_arr;
         for (auto & gap : g) {
             drawGap(vis_arr, gap, ns);
         }
         gaparc_publisher.publish(vis_arr);
+    }
+
+    void GapVisualizer::drawFastManipGap(visualization_msgs::MarkerArray & vis_arr, potential_gap::Gap g, bool & circle)
+    {
+        // if AGC: Color is Red
+        // if Convex: color is Brown, viz_jitter + 0.1
+        // if RadialExtension: color is green, draw additional circle
+        if (!cfg_->gap_viz.debug_viz) return;
+
+        if (!g.mode.reduced && !g.mode.convex && !g.mode.agc) {
+            return;
+        }
+
+        float viz_jitter = (float) cfg_->gap_viz.viz_jitter;
+        int viz_offset = 0;
+        if (viz_jitter > 0 && g.isAxial()){
+            viz_offset = g.isLeftType() ? -2 : 2;
+        }
+
+        std::string ns;
+        if (g.mode.reduced) {
+            ns = "fin_radial";
+            viz_jitter += 0.1;
+        }
+        
+        if (g.mode.convex) {
+            ns = "fin_extent";
+        }
+
+        if (g.mode.agc) {
+            ns = "fin_agc";
+        }
+
+        int c_ridx = g.convex.convex_ridx;
+        int c_lidx = g.convex.convex_lidx;
+        if(c_ridx < c_lidx)
+        {
+            if(c_ridx < 0)
+                c_ridx = abs(c_ridx) + 512; // WARNING: this 512 is not good, use it temporarily.
+            if(c_lidx > 0)
+                c_lidx = c_lidx - 512;
+        }
+        
+        int num_gaps = int(round(float(c_ridx - c_lidx) / cfg_->gap_viz.min_resoln));
+        float dist_step = (g.convex.convex_rdist - g.convex.convex_ldist) / num_gaps;
+        int sub_gap_lidx = c_lidx + viz_offset;
+        float sub_gap_ldist = g.convex.convex_ldist;
+
+        visualization_msgs::Marker this_marker;
+        this_marker.header.frame_id = g._frame;
+        this_marker.header.stamp = g._stamp;
+        this_marker.ns = ns;
+        this_marker.type = visualization_msgs::Marker::LINE_STRIP;
+        this_marker.action = visualization_msgs::Marker::ADD;
+        this_marker.pose.orientation.w = 1;
+
+        auto color_value = colormap.find(ns);
+        if (color_value == colormap.end()) {
+            ROS_FATAL_STREAM("[drawManipGaps] Visualization Color not found, return without drawing");
+            return;
+        }
+
+        // this_marker.colors = color_value->second;
+        double thickness = cfg_->gap_viz.fig_gen ? 0.05 : 0.01;
+        this_marker.scale.x = thickness;
+        this_marker.scale.y = 0.1;
+        this_marker.scale.z = 0.1;
+
+        geometry_msgs::Point line_pt;
+        line_pt.z = 0.1;
+        std::vector<geometry_msgs::Point> line_list;
+        std_msgs::ColorRGBA c_color = color_value->second.at(0);
+        std::vector<std_msgs::ColorRGBA> color_list;
+
+        int id = (int) vis_arr.markers.size();
+        // ROS_INFO_STREAM("ID: "<< id);
+
+        if(viz_offset != 0)
+        {
+            line_pt.x = (sub_gap_ldist + viz_jitter) * cos(-( (float) g.half_scan - sub_gap_lidx) / g.half_scan * M_PI);
+            line_pt.y = (sub_gap_ldist + viz_jitter) * sin(-( (float) g.half_scan - sub_gap_lidx) / g.half_scan * M_PI);
+            line_list.push_back(line_pt);
+
+            color_list.push_back(c_color);
+        }
+
+        for(size_t i = 0; i < num_gaps; i++)
+        {
+            int current_idx = sub_gap_lidx + i * cfg_->gap_viz.min_resoln;
+            float current_dist =  sub_gap_ldist + i * dist_step;
+            if(current_idx <= c_ridx)
+            {
+                line_pt.x = (current_dist + viz_jitter) * cos(-( (float) g.half_scan - current_idx) / g.half_scan * M_PI);
+                line_pt.y = (current_dist + viz_jitter) * sin(-( (float) g.half_scan - current_idx) / g.half_scan * M_PI);
+                line_list.push_back(line_pt);
+
+                color_list.push_back(c_color);
+            }
+        }
+
+        line_pt.x = (g.convex.convex_rdist + viz_jitter) * cos(-( (float) g.half_scan - c_ridx) / g.half_scan * M_PI);
+        line_pt.y = (g.convex.convex_rdist + viz_jitter) * sin(-( (float) g.half_scan - c_ridx) / g.half_scan * M_PI);
+        line_list.push_back(line_pt);
+        color_list.push_back(c_color);
+
+        this_marker.points = line_list;
+        this_marker.colors = color_list;
+        this_marker.id = id + 1;
+        // this_marker.lifetime = ros::Duration(g.life_time);
+        this_marker.lifetime = ros::Duration(0.1);
+        vis_arr.markers.push_back(this_marker);
+
+        if (g.mode.convex) {
+            visualization_msgs::Marker radial_ext_marker;
+            radial_ext_marker.header.frame_id = g._frame;
+            radial_ext_marker.header.stamp = g._stamp;
+            radial_ext_marker.ns = "fin_extent";
+            radial_ext_marker.type = visualization_msgs::Marker::LINE_STRIP;
+            radial_ext_marker.action = visualization_msgs::Marker::ADD;
+            radial_ext_marker.pose.orientation.w = 1;
+
+            float r = g.getMinSafeDist();
+            if (r < 0) {
+                ROS_WARN_STREAM("Gap min safe dist not recorded");
+            }
+
+            auto convex_color = colormap["fin_extent"];
+
+            // The Circle
+            if (!circle) {
+                geometry_msgs::Point circ_pt;
+                std::vector<geometry_msgs::Point> circ_list;
+                std::vector<std_msgs::ColorRGBA> circ_colors;
+                for (int i = 0; i < 50; i++) {
+                    circ_list.clear();
+                    circ_pt.x = r * cos(M_PI / 25 * float(i));
+                    circ_pt.y = r * sin(M_PI / 25 * float(i));
+                    circ_pt.z = 0.1;
+                    circ_list.push_back(circ_pt);
+                    circ_colors.push_back(convex_color.at(0));
+                }
+                radial_ext_marker.points = circ_list;
+                radial_ext_marker.colors = circ_colors;
+                radial_ext_marker.id = id + 1;
+                radial_ext_marker.lifetime = ros::Duration(0.1);
+                vis_arr.markers.push_back(radial_ext_marker);
+                circle = true;
+            }
+
+            auto getline = [] (int idx, float dist,
+                                Eigen::Vector2f& qB,
+                                std::vector<geometry_msgs::Point>& lines,
+                                geometry_msgs::Point& linel,
+                                geometry_msgs::Point& liner,
+                                visualization_msgs::Marker& this_marker,
+                                std::vector<std_msgs::ColorRGBA> & convex_color,
+                                visualization_msgs::MarkerArray& vis_arr,
+                                int half_num_scan,
+                                int id
+                                ) -> void {
+                                    lines.clear();
+                                    linel.x = qB(0);
+                                    linel.y = qB(1);
+                                    linel.z = 0.1;
+                                    liner.x = dist * cos(M_PI / half_num_scan * (idx - half_num_scan));
+                                    liner.y = dist * sin(M_PI / half_num_scan * (idx - half_num_scan));
+                                    liner.z = 0.1;
+                                    lines.push_back(linel);
+                                    lines.push_back(liner);
+                                    this_marker.points = lines;
+                                    this_marker.colors = convex_color;
+                                    this_marker.id = id;
+                                    this_marker.lifetime = ros::Duration(0.1);
+                                    vis_arr.markers.push_back(this_marker);
+                                };
+
+            {
+                geometry_msgs::Point linel, liner;
+                std::vector<geometry_msgs::Point> lines;
+
+                radial_ext_marker.ns = "extent_line";
+                getline(c_lidx, g.convex.convex_ldist, g.qB, 
+                    lines, linel, liner, radial_ext_marker, convex_color, vis_arr, g.half_scan, id++);
+                getline(c_ridx, g.convex.convex_rdist, g.qB, 
+                    lines, linel, liner, radial_ext_marker, convex_color, vis_arr, g.half_scan, id++);
+                Eigen::Vector2f origin(0, 0);
+
+
+                radial_ext_marker.ns = "orig_line";
+                getline(g._left_idx, g._ldist, origin, 
+                    lines, linel, liner, radial_ext_marker, colormap["fin_agc"], vis_arr, g.half_scan, id++);
+                getline(g._right_idx, g._rdist, origin, 
+                    lines, linel, liner, radial_ext_marker, colormap["fin_agc"], vis_arr, g.half_scan, id++);
+            }
+        }
     }
 
     void GapVisualizer::drawManipGap(visualization_msgs::MarkerArray & vis_arr, potential_gap::Gap g, bool & circle) {
@@ -349,7 +597,8 @@ namespace potential_gap{
         visualization_msgs::MarkerArray vis_arr;
         bool circle = false;
         for (auto & gap : vec) {
-            drawManipGap(vis_arr, gap, circle);
+            // drawManipGap(vis_arr, gap, circle);
+            drawFastManipGap(vis_arr, gap, circle);
         }
         gapside_publisher.publish(vis_arr);
     }

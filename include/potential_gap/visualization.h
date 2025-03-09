@@ -41,8 +41,9 @@ namespace potential_gap
             GapVisualizer(ros::NodeHandle& nh, const potential_gap::PotentialGapConfig& cfg);
             void initialize(ros::NodeHandle& nh, const potential_gap::PotentialGapConfig& cfg);
             void drawGap(visualization_msgs::MarkerArray &, potential_gap::Gap g, std::string ns, std::string color = "Default");
-            void drawGaps(std::vector<potential_gap::Gap> g, std::string ns, std::string color = "Default");
+            void drawGaps(std::vector<potential_gap::Gap>& g, std::string ns, std::string color = "Default");
             void drawManipGap(visualization_msgs::MarkerArray &, potential_gap::Gap g, bool &);
+            void drawFastManipGap(visualization_msgs::MarkerArray &, potential_gap::Gap g, bool &);
             void drawManipGaps(std::vector<potential_gap::Gap> vec);
 
         private:

@@ -200,8 +200,11 @@ namespace Bezier
         void normalize()
         {
             double len = length();
-            x /= len;
-            y /= len;
+            if(len != 0)
+            {
+                x /= len;
+                y /= len;
+            }
         }
 
         void translate(float dx, float dy)

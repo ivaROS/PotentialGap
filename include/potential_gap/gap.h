@@ -13,6 +13,10 @@
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 
+#include <potential_gap/GapInfo.h>
+#include <potential_gap/GapSide.h>
+#include <potential_gap/GapGoalModes.h>
+
 namespace potential_gap
 {
     class Gap
@@ -20,10 +24,15 @@ namespace potential_gap
         public:
             Gap() {};
 
-            Gap(std::string frame, int left_idx, float ldist, bool axial = false, float half_scan = 256) : _frame(frame), _left_idx(left_idx), _ldist(ldist), _axial(axial), half_scan(half_scan)
+            Gap(ros::Time stamp, std::string frame, int left_idx, float ldist, bool axial = false, float half_scan = 256) : _stamp(stamp), _frame(frame), _left_idx(left_idx), _ldist(ldist), _axial(axial), half_scan(half_scan)
             {};
 
             ~Gap() {};
+
+            void setStamp(ros::Time t)
+            {
+                _stamp = t;
+            }
 
             void setLIdx(int lidx)
             {
@@ -123,20 +132,35 @@ namespace potential_gap
                 // ROS_INFO_STREAM("Trans: Lx: " << l_trans_pt.point.x << " ly: " << l_trans_pt.point.y << " rx: " << r_trans_pt.point.x << " ry: " << r_trans_pt.point.y);
                 // ROS_INFO_STREAM("L ang: " << l_trans_ang << " L range: " << l_trans_range << " R ang: " << r_trans_ang << " R range: " << r_trans_range);
 
-                if(l_trans_ang > r_trans_ang && l_trans_ang >= 0 && r_trans_ang < 0)
+                float orig_gap_ang = getOrigGapAng<float>();
+                // bool small_ang_gap = (abs(orig_gap_ang) < 5 * M_PI / 180);
+                bool small_trans_ang_gap = (abs(l_trans_ang - r_trans_ang) < 10 * M_PI / 180); // TODO: not that smart
+
+                if(!small_trans_ang_gap)
                 {
-                    if(abs(M_PI - l_trans_ang) < abs(r_trans_ang + M_PI))
+                    if(l_trans_ang > r_trans_ang && l_trans_ang >= 0 && r_trans_ang < 0)
+                    {
+                        if(abs(M_PI - l_trans_ang) < abs(r_trans_ang + M_PI))
+                            l_trans_ang = -M_PI;
+                        else
+                            r_trans_ang = M_PI;
+                    }
+                    else if(l_trans_ang > r_trans_ang && l_trans_ang >= 0 && r_trans_ang >= 0)
+                    {
                         l_trans_ang = -M_PI;
-                    else
+                    }
+                    else if(l_trans_ang > r_trans_ang && l_trans_ang < 0 && r_trans_ang < 0)
+                    {
                         r_trans_ang = M_PI;
+                    }
                 }
-                else if(l_trans_ang > r_trans_ang && l_trans_ang >= 0 && r_trans_ang >= 0)
+                else
                 {
-                    l_trans_ang = -M_PI;
-                }
-                else if(l_trans_ang > r_trans_ang && l_trans_ang < 0 && r_trans_ang < 0)
-                {
-                    r_trans_ang = M_PI;
+                    if(l_trans_ang > r_trans_ang)
+                    {
+                        l_trans_ang = r_trans_ang - resoln;
+                        l_trans_ang = l_trans_ang >= -M_PI ? l_trans_ang : -M_PI;
+                    }
                 }
 
                 // ROS_INFO_STREAM("Check L ang: " << l_trans_ang << " L range: " << l_trans_range << " R ang: " << r_trans_ang << " R range: " << r_trans_range);
@@ -154,6 +178,14 @@ namespace potential_gap
                         l_idx--;
                     else
                         r_idx++;
+                }
+
+                int orig_l_idx, orig_r_idx;
+                getLRIdx(orig_l_idx, orig_r_idx);
+                if(orig_l_idx == 0 && orig_r_idx == (half_scan * 2 - 1))
+                {
+                    l_idx = orig_l_idx;
+                    r_idx = orig_r_idx;
                 }
 
                 // ROS_INFO_STREAM("L idx: " << l_idx << " R idx: " << r_idx);
@@ -191,6 +223,14 @@ namespace potential_gap
                 convex.convex_rdist = _rdist;
             }
 
+            template<typename T>
+            T getOrigGapAng()
+            {
+                T l_ang = -((T) half_scan - _left_idx) / half_scan * M_PI;
+                T r_ang = -((T) half_scan - _right_idx) / half_scan * M_PI;
+                return r_ang - l_ang;
+            }
+
             // Get Left Cartesian Distance
             void getLCartesian(float &x, float &y)
             {
@@ -213,6 +253,30 @@ namespace potential_gap
             void getRadialExRCartesian(float &x, float &y){
                 x = (convex.convex_rdist) * cos(-((float) half_scan - convex.convex_ridx) / half_scan * M_PI);
                 y = (convex.convex_rdist) * sin(-((float) half_scan - convex.convex_ridx) / half_scan * M_PI);
+            }
+
+            template<typename T>
+            void getConvexLCartesian(T &x, T &y){
+                x = ((T) convex.convex_ldist) * cos(-((T) half_scan - convex.convex_lidx) / half_scan * M_PI);
+                y = ((T) convex.convex_ldist) * sin(-((T) half_scan - convex.convex_lidx) / half_scan * M_PI);
+            }
+
+            template<typename T>
+            void getConvexRCartesian(T &x, T &y){
+                x = ((T) convex.convex_rdist) * cos(-((T) half_scan - convex.convex_ridx) / half_scan * M_PI);
+                y = ((T) convex.convex_rdist) * sin(-((T) half_scan - convex.convex_ridx) / half_scan * M_PI);
+            }
+
+            template<typename T>
+            void getConvexLPolar(T &d, T &rho){
+                d = (T) convex.convex_ldist;
+                rho = -((T) half_scan - convex.convex_lidx) / half_scan * M_PI;
+            }
+
+            template<typename T>
+            void getConvexRPolar(T &d, T &rho){
+                d = (T) convex.convex_rdist;
+                rho = -((T) half_scan - convex.convex_ridx) / half_scan * M_PI;
             }
 
             void setAGCIdx(int lidx, int ridx) {
@@ -248,7 +312,7 @@ namespace potential_gap
                 }
                 
                 for (int i = 0; i < num_gaps; i++) {
-                    Gap detected_gap(_frame, sub_gap_lidx, sub_gap_ldist);
+                    Gap detected_gap(_stamp, _frame, sub_gap_lidx, sub_gap_ldist);
                     // ROS_DEBUG_STREAM("lidx: " << sub_gap_lidx << "ldist: " << sub_gap_ldist);
                     if (i != 0) {
                         detected_gap.setLeftObs();
@@ -330,6 +394,11 @@ namespace potential_gap
                 return _frame;
             }
 
+            ros::Time getStamp()
+            {
+                return _stamp;
+            }
+
             float get_dist_side() {
                 return sqrt(pow(_ldist, 2) + pow(_rdist, 2) - 2 * _ldist * _rdist * (cos(float(_right_idx - _left_idx) / float(half_scan) * M_PI)));
             }
@@ -345,7 +414,42 @@ namespace potential_gap
                 Eigen::Vector2d m_vec = (l_vec + r_vec) / 2;
                 return m_vec;
             }
+
+            potential_gap::GapInfo toMsg()
+            {
+                potential_gap::GapSide l, r;
+                l.idx = convex.convex_lidx;
+                getConvexLCartesian(l.x, l.y);
+                getConvexLPolar(l.d, l.rho);
+                r.idx = convex.convex_ridx;
+                getConvexRCartesian(r.x, r.y);
+                getConvexRPolar(r.d, r.rho);
+
+                potential_gap::GapGoalModes modes;
+                modes.reduced = mode.reduced;
+                modes.radial_extend = mode.convex;
+                modes.agc = mode.agc;
+                modes.inflated = mode.inflated;
+                modes.goal_set = goal.set;
+                modes.goal_discard = goal.discard;
+                modes.goal_within = goal.goalwithin;
+
+                potential_gap::GapInfo msg;
+                msg.header.frame_id = getFrame();
+                msg.header.stamp = getStamp();
+
+                msg.l_gap = l;
+                msg.r_gap = r;
+                msg.axial = isAxial();
+                msg.left_type = left_type;
+
+                msg.gap_mode = modes;
+
+                return msg;
+            }
             
+            ros::Time _stamp;
+
             bool goal_within = false;
             bool goal_dir_within = false;
             float life_time = 1.0;

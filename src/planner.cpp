@@ -175,10 +175,12 @@ namespace potential_gap
         local_traj_pub = nh.advertise<geometry_msgs::PoseArray>("relevant_traj", 500);
         trajectory_pub = nh.advertise<geometry_msgs::PoseArray>("pg_traj", 10);
         gap_vis_pub = nh.advertise<visualization_msgs::MarkerArray>("gaps", 1);
+        observed_gap_pub = nh.advertise<potential_gap::GapArray>("observed_gaps", 1);
         selected_gap_vis_pub = nh.advertise<visualization_msgs::MarkerArray>("sel_gaps", 1);
         ni_traj_pub = nh.advertise<geometry_msgs::PoseArray>("ni_traj", 10);
         ni_traj_pub_other = nh.advertise<visualization_msgs::MarkerArray>("other_ni_traj", 5);
 
+        preprocess_laser_pub = nh.advertise<sensor_msgs::LaserScan>("preprocess_laserscan", 5);
         transformed_laser_pub = nh.advertise<sensor_msgs::LaserScan>("transformed_laserscan", 5);
         virtual_orient_traj_pub = nh.advertise<geometry_msgs::PoseArray>("picked_virtual_traj", 10);
 
@@ -301,11 +303,15 @@ namespace potential_gap
         transformed_laser.range_max = msg->range_max;
         transformed_laser.intensities = msg->intensities;
 
-        std::vector<float> ranges(msg->ranges.size(), msg->range_max - OFFSET);
+        // std::vector<float> ranges(msg->ranges.size(), msg->range_max - OFFSET);
+        std::vector<float> ranges(msg->ranges.size(), nan(""));
         transformed_laser.ranges = ranges;
 
         for(size_t i = 0; i < msg->ranges.size(); i++)
         {
+            if(msg->ranges[i] >= LASER_ORIG_MAX_RANGE_ || isnan(msg->ranges[i]))
+                continue;
+
             double orig_range = msg->ranges[i];
             double orig_ang = i * msg->angle_increment + msg->angle_min;
             orig_ang = orig_ang <= msg->angle_max ? orig_ang : msg->angle_max;
@@ -322,14 +328,82 @@ namespace potential_gap
             double transformed_range = sqrt(pow(transformed_pt.point.x, 2) + pow(transformed_pt.point.y, 2));
             double transformed_ang = std::atan2(transformed_pt.point.y, transformed_pt.point.x);
             int idx = (int) round((transformed_ang - msg->angle_min) / msg->angle_increment);
-            idx = idx < msg->ranges.size() ? idx : (msg->ranges.size() - 1);
-            idx = idx >= 0 ? idx : 0;
+            idx = idx >= (int) msg->ranges.size() ? (msg->ranges.size() - 1) : idx;
+            idx = idx < 0 ? 0 : idx;
 
-            if(transformed_range < transformed_laser.ranges[idx])
+            if(isnan(transformed_laser.ranges[idx]))
+                transformed_laser.ranges[idx] = transformed_range;
+            else if(!isnan(transformed_laser.ranges[idx]) && transformed_range < transformed_laser.ranges[idx])
                 transformed_laser.ranges[idx] = transformed_range;
         }
 
         return boost::make_shared<sensor_msgs::LaserScan const>(transformed_laser);
+    }
+
+    boost::shared_ptr<sensor_msgs::LaserScan const> Planner::preprocessLaser(boost::shared_ptr<sensor_msgs::LaserScan const> msg)
+    {
+        sensor_msgs::LaserScan preprocessed_laser;
+        preprocessed_laser = *msg;
+        for(size_t i = 0; i < preprocessed_laser.ranges.size(); i++)
+        {
+            if(isnan(preprocessed_laser.ranges[i]))
+                preprocessed_laser.ranges[i] = LASER_ORIG_MAX_RANGE_;
+            else
+            {
+                if(preprocessed_laser.ranges[i] > LASER_ORIG_MAX_RANGE_)
+                    preprocessed_laser.ranges[i] = LASER_ORIG_MAX_RANGE_;
+            }
+        }
+
+        return boost::make_shared<sensor_msgs::LaserScan const>(preprocessed_laser);
+    }
+
+    boost::shared_ptr<sensor_msgs::LaserScan const> Planner::postprocessLaser(boost::shared_ptr<sensor_msgs::LaserScan const> msg)
+    {
+        sensor_msgs::LaserScan postprocessed_laser;
+        postprocessed_laser = *msg;
+        int scan_size = postprocessed_laser.ranges.size();
+
+        if(scan_size <= 2)
+            return boost::make_shared<sensor_msgs::LaserScan const>(postprocessed_laser);
+
+        if(!isnan(postprocessed_laser.ranges[0]) && 
+           !isnan(postprocessed_laser.ranges[1]) &&
+           postprocessed_laser.ranges[0] != postprocessed_laser.ranges[1])
+            postprocessed_laser.ranges[0] = postprocessed_laser.ranges[1];
+
+        if(!isnan(postprocessed_laser.ranges[scan_size - 1]) && 
+           !isnan(postprocessed_laser.ranges[scan_size - 2]) &&
+            postprocessed_laser.ranges[scan_size - 1] != postprocessed_laser.ranges[scan_size - 2])
+            postprocessed_laser.ranges[scan_size - 1] = postprocessed_laser.ranges[scan_size - 2];
+
+        float max_scan_dist = 0;
+        for(size_t i = 0; i < postprocessed_laser.ranges.size(); i++)
+        {
+            if(isnan(postprocessed_laser.ranges[i]))
+                continue;
+            float cur_range = postprocessed_laser.ranges[i];
+            if(cur_range != msg->range_max && cur_range > max_scan_dist)
+                max_scan_dist = cur_range;
+        }
+
+        for(size_t i = 1; i < postprocessed_laser.ranges.size() - 1; i++)
+        {
+            if(isnan(postprocessed_laser.ranges[i]) || 
+               isnan(postprocessed_laser.ranges[i - 1]) ||
+               isnan(postprocessed_laser.ranges[i + 1]))
+                continue;
+
+            if(postprocessed_laser.ranges[i] <= max_scan_dist && 
+               postprocessed_laser.ranges[i] >= max_scan_dist - 0.03 &&
+               postprocessed_laser.ranges[i - 1] < max_scan_dist - 0.03 && 
+               postprocessed_laser.ranges[i + 1] < max_scan_dist - 0.03)
+            {
+                postprocessed_laser.ranges[i] = postprocessed_laser.ranges[i - 1];
+            }
+        }
+
+        return boost::make_shared<sensor_msgs::LaserScan const>(postprocessed_laser);
     }
 
     void Planner::inflatedlaserScanCB(boost::shared_ptr<sensor_msgs::LaserScan const> msg)
@@ -342,7 +416,11 @@ namespace potential_gap
     void Planner::laserScanCB(boost::shared_ptr<sensor_msgs::LaserScan const> msg)
     {
         // sharedPtr_laser = msg;
-        sharedPtr_laser = transformLaserToRbt(msg);
+        auto trans_laser = transformLaserToRbt(msg);
+        sharedPtr_laser = postprocessLaser(trans_laser);
+        auto tmp_preprocess = preprocessLaser(msg);
+        boost::shared_ptr<sensor_msgs::LaserScan const> preprocess_msg = postprocessLaser(tmp_preprocess);
+        preprocess_laser_pub.publish(preprocess_msg);
         transformed_laser_pub.publish(sharedPtr_laser);
 
         boost::shared_ptr<sensor_msgs::LaserScan const> tmp_msg = sharedPtr_laser;
@@ -357,12 +435,15 @@ namespace potential_gap
 
         try {
             boost::mutex::scoped_lock gapset(gapset_mutex);
-            finder->hybridScanGap(msg, observed_gaps);
+            finder->hybridScanGap(preprocess_msg, observed_gaps);
             gapvisualizer->drawGaps(observed_gaps, std::string("raw"));
-            finder->mergeGapsOneGo(msg, observed_gaps);
+            finder->mergeGapsOneGo(preprocess_msg, observed_gaps);
             gapvisualizer->drawGaps(observed_gaps, std::string("fin"));
 
-            auto trans_min_dist = *std::min_element(tmp_msg->ranges.begin(), tmp_msg->ranges.end());
+            
+
+            auto trans_min_dist = *std::min_element(tmp_msg->ranges.begin(), tmp_msg->ranges.end(), min_element_comp);
+            trans_min_dist = isnan(trans_min_dist) ? LASER_ORIG_MAX_RANGE_ : trans_min_dist;
             geometry_msgs::TransformStamped trans = tfBuffer.lookupTransform(cfg.robot_frame_id, cfg.sensor_frame_id, ros::Time(0));
             for(auto &g : observed_gaps)
             {
@@ -405,7 +486,7 @@ namespace potential_gap
 
         // WARNING: NOT USED
         if (cfg.gap_viz.follow_the_gap_vis) {
-            finder->followtheGap(msg, ftg_gaps);
+            finder->followtheGap(preprocess_msg, ftg_gaps);
             if (ftg_gaps.size() == 0)
             {
                 ROS_DEBUG_STREAM_THROTTLE(5, "FTG Gap Count: " << ftg_gaps.size());
@@ -414,9 +495,16 @@ namespace potential_gap
         // WARNING: NOT USED
         if (cfg.gap_viz.close_gap_vis)
         {
-            finder->safeGapScan(msg, safe_gaps_left, safe_gaps_right, safe_gaps_central);
-            finder->safeGapClose(msg, safe_gaps_left, safe_gaps_right, safe_gaps_central, safe_gaps);
+            finder->safeGapScan(preprocess_msg, safe_gaps_left, safe_gaps_right, safe_gaps_central);
+            finder->safeGapClose(preprocess_msg, safe_gaps_left, safe_gaps_right, safe_gaps_central, safe_gaps);
             finder->safeGapMerge(safe_gaps);
+        }
+
+        if(cfg.gap_manip.gap_manip_run)
+        {
+            updateLocalTF();
+            updateGlobalTF();
+            auto gap_set = gapManipulate();
         }
 
     }
@@ -596,6 +684,7 @@ namespace potential_gap
         // tf2::doTransform(goalselector->rbtFrameLocalGoal(), local_goal_sensor_frame, rbt2cam);
         geometry_msgs::PoseStamped local_goal_rbt_frame = goalselector->rbtFrameLocalGoal();
         try {
+            potential_gap::GapArray observed_gaps_msg;
             for (size_t i = 0; i < manip_set.size(); i++)
             {
                 gapManip->reduceGap(manip_set.at(i), local_goal_rbt_frame);
@@ -604,7 +693,13 @@ namespace potential_gap
                 // gapManip->inflateGapConserv(manip_set.at(i));
                 gapManip->inflateGapLarge(manip_set.at(i));
                 gapManip->setGapWaypoint(manip_set.at(i), local_goal_rbt_frame);
+
+                potential_gap::GapInfo g_msg = manip_set.at(i).toMsg();
+                observed_gaps_msg.gaps.push_back(g_msg);
             }
+            if(observed_gaps_msg.gaps.size() != 0)
+                observed_gaps_msg.header = observed_gaps_msg.gaps[0].header;
+            observed_gap_pub.publish(observed_gaps_msg);
         } catch(...) {
             ROS_FATAL_STREAM("gapManipulate");
         }
@@ -615,7 +710,8 @@ namespace potential_gap
     }
 
     // std::vector<geometry_msgs::PoseArray> 
-    std::vector<std::vector<double>> Planner::initialTrajGen(std::vector<potential_gap::Gap> vec, std::vector<geometry_msgs::PoseArray>& res, std::vector<geometry_msgs::PoseArray>& virtual_decayed) {
+    std::vector<std::vector<double>> Planner::initialTrajGen(std::vector<potential_gap::Gap> vec, std::vector<geometry_msgs::PoseArray>& res, std::vector<geometry_msgs::PoseArray>& virtual_decayed, 
+                                                             std::vector<BezierPathProfile>* full_bezier_path) {
         boost::mutex::scoped_lock gapset(gapset_mutex);
         std::vector<geometry_msgs::PoseArray> ret_traj(vec.size());
         std::vector<geometry_msgs::PoseArray> virtual_traj(vec.size());
@@ -630,15 +726,24 @@ namespace potential_gap
             for (size_t i = 0; i < vec.size(); i++) {
 		// Generate trajectory in robot frame.
                 geometry_msgs::PoseArray tmp;
+                BezierPathProfile bezier_paths;
                 if(cfg.planning.use_bezier)
                 {
                     if(robot_geo_proc_.robot_.shape == RobotShape::box && robot_geo_proc_.robot_.holonomic)
                         tmp = gapTrajSyn->generateBezierTrajectory(vec.at(i), sharedPtr_odom, odom2rbt);
                     else
-                        tmp = gapTrajSyn->genMultiBezierTrajs(vec.at(i), sharedPtr_odom);
+                    {
+                        tmp = gapTrajSyn->genMultiBezierTrajs(vec.at(i), sharedPtr_odom, bezier_paths);
+                        if(full_bezier_path)
+                        {
+                            bezier_paths.header = tmp.header;
+                            full_bezier_path->push_back(bezier_paths);
+                        }
+                    }
                 }
                 else
                 {
+                    ROS_INFO_STREAM("Use PG.");
                     tmp = gapTrajSyn->generateTrajectory(vec.at(i), rbt_local_pose);
                 }
 
@@ -750,7 +855,7 @@ namespace potential_gap
         return decayed_path;
     }
 
-    geometry_msgs::PoseArray Planner::pickTraj(std::vector<geometry_msgs::PoseArray> prr, std::vector<std::vector<double>> score, std::vector<potential_gap::Gap> gaps, std::vector<geometry_msgs::PoseArray> virtual_path, geometry_msgs::PoseArray& chosen_virtual_path) {
+    geometry_msgs::PoseArray Planner::pickTraj(std::vector<geometry_msgs::PoseArray> prr, std::vector<std::vector<double>> score, std::vector<potential_gap::Gap> gaps, std::vector<geometry_msgs::PoseArray> virtual_path, geometry_msgs::PoseArray& chosen_virtual_path, int* picked_id) {
         ROS_INFO_STREAM_NAMED("pg_trajCount", "pg_trajCount, " << prr.size());
         if (prr.size() == 0) {
             ROS_WARN_STREAM("No traj synthesized");
@@ -811,7 +916,8 @@ namespace potential_gap
             potential_gap::StaticInfGap current_inf(gaps.at(idx), rbt2odom);
             current_inf_gap_ = current_inf;
         }
-        
+        if(picked_id)
+            *picked_id = idx;
         return prr.at(idx);
     }
     
@@ -1093,8 +1199,10 @@ namespace potential_gap
             min_dist_arr.at(i) = sqrt(pow(x, 2) + pow(y, 2));
         }
 
-        int min_idx = std::min_element( min_dist_arr.begin(), min_dist_arr.end() ) - min_dist_arr.begin();
+        int min_idx = std::min_element( min_dist_arr.begin(), min_dist_arr.end(), min_element_comp) - min_dist_arr.begin();
         double min_dist = (double) min_dist_arr.at(min_idx);
+        min_idx = isnan(min_dist) ? stored_scan_msgs.ranges.size() / 2 : min_idx;
+        min_dist = isnan(min_dist) ? LASER_ORIG_MAX_RANGE_ : min_dist;
         double min_dist_ang = (double)(min_idx) * stored_scan_msgs.angle_increment + stored_scan_msgs.angle_min;
 
         return std::pair<double, double>(min_dist, min_dist_ang);
